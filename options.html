@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Window Layout Manager Options</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body class="options-page"> <!-- Added options-page class -->
+  <div class="container"> <!-- Added container div -->
+    <h1>Extension Options</h1>
+
+    <div id="options-status-message" class="status"></div> <!-- Status message div -->
+
+    <div class="section">
+      <h2>Preset Application Behavior</h2>
+      <form id="options-form">
+        <div>
+          <input type="radio" id="behavior-close-all" name="preset-behavior" value="close_all">
+          <label for="behavior-close-all">Close all other windows before applying preset</label>
+        </div>
+        <div>
+          <input type="radio" id="behavior-merge" name="preset-behavior" value="merge">
+          <label for="behavior-merge">Merge preset with existing windows (experimental)</label>
+        </div>
+      </form>
+    </div>
+
+    <button id="save-options-btn">Save Settings</button>
+  </div> <!-- End container div -->
+
+  <script src="options.js"></script>
+</body>
+</html>

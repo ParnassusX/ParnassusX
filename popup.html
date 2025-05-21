@@ -1,11 +1,41 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Chrome Extension Starter Popup</title>
+  <title>Window Layout Manager</title>
   <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <body>
-  <h1>Hello, Extension!</h1>
+  <h1>Window Layout Manager</h1>
+
+  <div id="status-message" class="status"></div> <!-- Status message div -->
+
+  <div class="section" id="capture-layout-section">
+    <h2>Capture & Save</h2>
+    <button id="capture-layout-btn" class="secondary">Capture Current Window Layout</button>
+    <div class="input-group"> <!-- Changed to input-group for better flex layout -->
+      <input type="text" id="preset-name-input" placeholder="Enter preset name..." />
+      <button id="save-layout-btn">Save Captured Layout</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Saved Presets</h2>
+    <div id="presets-list">
+      <!-- Presets will be listed here by popup.js -->
+      <!-- Example of how JS will render it:
+      <ul>
+        <li>
+          <span class="preset-name">My Favorite Setup</span>
+          <div class="button-group">
+            <button class="apply-preset-btn">Apply</button>
+            <button class="delete-btn">Delete</button>
+          </div>
+        </li>
+      </ul>
+      -->
+    </div>
+  </div>
+
   <script src="popup.js"></script>
 </body>
 </html>
