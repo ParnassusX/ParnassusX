@@ -1,0 +1,10 @@
+{
+  "name": "Chrome Extension Starter",
+  "description": "A basic starter template for a Chrome Extension.",
+  "version": "1.0",
+  "manifest_version": 3,
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  }
+}
