@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const presetsListDiv = document.getElementById('presets-list');
   const statusMessageDiv = document.getElementById('status-message');
 
-  let capturedLayout = null;
+  let capturedLayout = null; // Holds the layout captured by the main "Capture" button
   let statusTimeout = null; 
 
   function displayStatus(message, isError = false, duration = 5000) {
@@ -36,8 +36,17 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (response && (response.status === "success" || response.success)) { 
       if (successCallback) successCallback(response);
     } else {
-      displayStatus("Unexpected response from background.", true);
-      console.warn("Unexpected response:", response);
+      // Handle cases where response might be the direct data without a status wrapper,
+      // though background.js is now standardized to return status objects.
+      if (response && typeof response.presets !== 'undefined' && successCallback) { // Specifically for getPresets
+        successCallback(response);
+      } else if (response && typeof response.layout !== 'undefined' && successCallback) { // Specifically for captureLayout
+         successCallback(response);
+      }
+      else {
+        displayStatus(`Unexpected response structure from ${errorPrefix}.`, true);
+        console.warn(`Unexpected response from ${errorPrefix}:`, response);
+      }
     }
   }
 
@@ -51,6 +60,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const buttonGroupDiv = document.createElement('div');
     buttonGroupDiv.className = 'button-group';
+
+    // UPDATE Button
+    const updateBtn = document.createElement('button');
+    updateBtn.textContent = 'Update';
+    updateBtn.classList.add('update-btn'); // Add class for specific styling if needed
+    updateBtn.setAttribute('data-preset-name', presetName);
+    updateBtn.addEventListener('click', (event) => {
+      const nameToUpdate = event.target.getAttribute('data-preset-name');
+      displayStatus(`Updating preset "${nameToUpdate}"... Capturing current layout.`, false, 3000);
+      
+      // Step 1: Capture current layout
+      chrome.runtime.sendMessage({ action: "captureLayout" }, (captureResponse) => {
+        handleResponse(captureResponse, (capRes) => {
+          if (capRes.layout && Object.keys(capRes.layout).length > 0) {
+            const newLayoutData = capRes.layout;
+            displayStatus(`Layout captured for "${nameToUpdate}". Now saving...`, false, 2000);
+            // Step 2: Send updatePreset message with the new layout
+            chrome.runtime.sendMessage({ action: "updatePreset", presetName: nameToUpdate, layoutData: newLayoutData }, (updateMsgResponse) => {
+              handleResponse(updateMsgResponse, () => {
+                displayStatus(updateMsgResponse.message || `Preset "${nameToUpdate}" updated successfully.`, false);
+                // No need to call loadPresets() here as preset name doesn't change, and content isn't shown in list.
+              }, `Error updating preset "${nameToUpdate}"`);
+            });
+          } else {
+            displayStatus(`Failed to capture new layout for "${nameToUpdate}". Update cancelled.`, true);
+          }
+        }, `Error capturing layout for update of "${nameToUpdate}"`);
+      });
+    });
 
     const applyBtn = document.createElement('button');
     applyBtn.textContent = 'Apply';
@@ -81,7 +119,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }, `Error deleting preset "${name}"`);
       });
     });
-
+    
+    // Order: Update, Apply, Delete
+    buttonGroupDiv.appendChild(updateBtn);
     buttonGroupDiv.appendChild(applyBtn);
     buttonGroupDiv.appendChild(deleteBtn);
     li.appendChild(buttonGroupDiv);
@@ -92,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.runtime.sendMessage({ action: "getPresets" }, (response) => {
       handleResponse(response, (r) => {
         presetsListDiv.innerHTML = ''; 
-        const presets = r.presets;
+        const presets = r.presets; // Assuming background returns {status:"success", presets: {...}}
         if (presets && Object.keys(presets).length > 0) {
           const ul = document.createElement('ul');
           for (const presetName in presets) {
@@ -111,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
       displayStatus('Capturing layout...', false, 2000);
       chrome.runtime.sendMessage({ action: "captureLayout" }, (response) => {
         handleResponse(response, (r) => {
-          capturedLayout = r.layout;
+          capturedLayout = r.layout; // Store in the global 'capturedLayout' for the main "Save" button
           displayStatus(r.message || 'Layout captured! Enter name and save.', false);
           console.log("Captured layout in popup:", capturedLayout); 
         }, "Error capturing layout");

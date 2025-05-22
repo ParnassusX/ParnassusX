@@ -41,10 +41,8 @@ async function captureCurrentWindowLayout() {
 
     if (!displays || displays.length === 0) {
         console.error("captureCurrentWindowLayout: No display information available.");
-        // Potentially return an error object or throw, to be caught by the caller
         return { error: "No display information available." };
     }
-
 
     console.log("Captured Windows:", windows);
     console.log("Captured Displays:", displays);
@@ -57,15 +55,15 @@ async function captureCurrentWindowLayout() {
         tabs: (win.tabs || []).filter(tab => typeof tab.url === 'string' && tab.url.length > 0 && !tab.url.startsWith("chrome-extension://"))
                        .map(tab => ({
                          url: tab.url,
-                         active: tab.active || false, // Ensure boolean
-                         pinned: tab.pinned || false  // Ensure boolean
+                         active: tab.active || false, 
+                         pinned: tab.pinned || false  
                        })),
       };
     });
     return { windows: sanitizedWindows, displays };
   } catch (error) {
     console.error("Error in captureCurrentWindowLayout:", error.message, error.stack);
-    return { error: `Failed to capture layout: ${error.message}` }; // Return an error object for the caller
+    return { error: `Failed to capture layout: ${error.message}` }; 
   }
 }
 
@@ -89,17 +87,77 @@ async function savePreset(presetName, layoutData) {
   }
 }
 
+async function updatePreset(presetName, layoutData) {
+  try {
+    if (!presetName || typeof presetName !== 'string' || presetName.trim() === "") {
+      return { success: false, message: "Invalid preset name for update." };
+    }
+    if (!layoutData || !layoutData.windows || !layoutData.displays) {
+      return { success: false, message: "Invalid layout data provided for update." };
+    }
+    const data = await chrome.storage.local.get('presets');
+    const presets = data.presets || {};
+    
+    presets[presetName] = layoutData;
+    await chrome.storage.local.set({ presets });
+    console.log(`Preset "${presetName}" updated successfully.`, presets);
+    return { success: true, message: `Preset "${presetName}" updated.` };
+  } catch (error) {
+    console.error(`Error updating preset "${presetName}":`, error.message, error.stack);
+    return { success: false, message: `Error updating preset: ${error.message}` };
+  }
+}
+
+
 async function getPresets() {
   try {
     const data = await chrome.storage.local.get('presets');
     return data.presets || {};
   } catch (error) {
     console.error("Error retrieving presets:", error.message, error.stack);
-    // Return null or an empty object, but also indicate error to caller if possible
-    // For onMessage, this will be wrapped in a status object.
-    throw error; // Re-throw to be caught by the message listener's catch block
+    throw error; 
   }
 }
+
+async function importPresets(importedPresetsData) {
+  if (typeof importedPresetsData !== 'object' || importedPresetsData === null) {
+    return { success: false, message: "Invalid import data: Not an object." };
+  }
+
+  try {
+    const data = await chrome.storage.local.get('presets');
+    let currentPresets = data.presets || {};
+    let importedCount = 0;
+    let skippedCount = 0;
+
+    for (const presetName in importedPresetsData) {
+      if (Object.prototype.hasOwnProperty.call(importedPresetsData, presetName)) {
+        const presetContent = importedPresetsData[presetName];
+        if (presetContent && Array.isArray(presetContent.windows) && Array.isArray(presetContent.displays)) {
+          currentPresets[presetName] = presetContent;
+          importedCount++;
+        } else {
+          console.warn(`Skipping import for preset "${presetName}": invalid structure.`, presetContent);
+          skippedCount++;
+        }
+      }
+    }
+
+    await chrome.storage.local.set({ presets: currentPresets });
+    
+    let message = `${importedCount} preset(s) imported/updated successfully.`;
+    if (skippedCount > 0) {
+      message += ` ${skippedCount} preset(s) were skipped due to invalid structure.`;
+    }
+    console.log(message, currentPresets);
+    return { success: true, message: message };
+
+  } catch (error) {
+    console.error("Error importing presets:", error.message, error.stack);
+    return { success: false, message: `Error importing presets: ${error.message}` };
+  }
+}
+
 
 async function applyPreset(presetName) {
   let options;
@@ -122,7 +180,7 @@ async function applyPreset(presetName) {
 
   let allPresets;
   try {
-    allPresets = await getPresets(); // getPresets now re-throws on error
+    allPresets = await getPresets(); 
   } catch (error) {
     return { success: false, message: `Failed to retrieve presets: ${error.message}` };
   }
@@ -157,22 +215,30 @@ async function applyPreset(presetName) {
   if (presetLayout.displays.length !== currentDisplays.length) {
     console.warn("Display configuration changed. Number of displays was:", presetLayout.displays.length, "now:", currentDisplays.length);
   }
-  // Further display comparison logic can be added here if necessary
 
-  if (presetBehavior === 'close_all') {
+  if (presetBehavior === 'close_all' || presetBehavior === 'smart_close_pinned') {
     try {
       const currentWindows = await chrome.windows.getAll({ populate: false, windowTypes: ['normal'] });
       for (const win of currentWindows) {
         if (win.id && (win.type === 'normal')) {
-           console.log(`Closing window ID: ${win.id} (behavior: close_all)`);
-           await chrome.windows.remove(win.id);
+          if (presetBehavior === 'smart_close_pinned') {
+            const tabsInWindow = await chrome.tabs.query({ windowId: win.id });
+            const hasPinnedTab = tabsInWindow.some(tab => tab.pinned);
+            if (hasPinnedTab) {
+              console.log(`Skipping closing window ID: ${win.id} (behavior: smart_close_pinned, has pinned tabs)`);
+              continue; 
+            }
+            console.log(`Closing window ID: ${win.id} (behavior: smart_close_pinned, no pinned tabs)`);
+          } else { 
+            console.log(`Closing window ID: ${win.id} (behavior: close_all)`);
+          }
+          await chrome.windows.remove(win.id);
         }
       }
     } catch (error) {
-      console.error("applyPreset: Error closing existing windows:", error.message, error.stack);
-      // Non-fatal, proceed with applying preset if possible
+      console.error("applyPreset: Error during window closing logic:", error.message, error.stack);
     }
-  } else {
+  } else if (presetBehavior === 'merge') {
     console.log("Skipping closing existing windows (behavior: merge).");
   }
   
@@ -182,7 +248,7 @@ async function applyPreset(presetName) {
                            .map(tab => safeGet(tab, 'url'))
                            .filter(url => typeof url === 'string' && url.length > 0);
 
-      if (urlsToOpen.length === 0 && typeof safeGet(windowData, 'appLaunchId') !== 'string') { // Check for app windows too
+      if (urlsToOpen.length === 0 && typeof safeGet(windowData, 'appLaunchId') !== 'string') { 
           console.warn("Window data in preset has no valid URLs or appLaunchId, skipping:", windowData);
           continue;
       }
@@ -200,7 +266,6 @@ async function applyPreset(presetName) {
           targetDisplay = currentDisplays.find(d => d.id === originalDisplayId);
           if (!targetDisplay) console.warn(`Window's original display ID ${originalDisplayId} not found. Using primary.`);
       } else {
-          // Fallback logic for older presets (simplified)
           console.warn("Window data missing displayId. Attempting to match by coordinates or using primary.");
       }
       
@@ -224,25 +289,23 @@ async function applyPreset(presetName) {
       console.log(`Adjusted window pos for display ${targetDisplay.id}: L:${targetLeft}, T:${targetTop}, W:${targetWidth}, H:${targetHeight}, S:${targetState}`);
 
       const createData = {
-        url: urlsToOpen.length > 0 ? urlsToOpen[0] : undefined, // only provide if there are URLs
+        url: urlsToOpen.length > 0 ? urlsToOpen[0] : undefined, 
         left: Math.round(targetLeft),
         top: Math.round(targetTop),
         width: Math.round(targetWidth),
         height: Math.round(targetHeight),
         focused: safeGet(windowData, 'focused', false),
         state: targetState,
-        // type: safeGet(windowData, 'type', 'normal') // Consider if type should be restored
       };
-      if (safeGet(windowData, 'appLaunchId')) { // For app windows
-        delete createData.url; // appLaunchId and url are mutually exclusive
+      if (safeGet(windowData, 'appLaunchId')) { 
+        delete createData.url; 
         createData.appLaunchId = safeGet(windowData, 'appLaunchId');
       }
-
 
       const newWindow = await chrome.windows.create(createData);
 
       if (newWindow && newWindow.id) {
-        for (let i = (createData.url ? 1 : 0); i < urlsToOpen.length; i++) { // start from 0 if no initial URL in createData
+        for (let i = (createData.url ? 1 : 0); i < urlsToOpen.length; i++) { 
           try {
             await chrome.tabs.create({
               windowId: newWindow.id,
@@ -267,14 +330,11 @@ async function applyPreset(presetName) {
       }
     } catch (windowError) {
       console.error("Error processing a window from preset:", windowData, windowError.message, windowError.stack);
-      // Continue to next window
     }
   }
 
   console.log(`Preset "${presetName}" applied.`);
   return { success: true, message: `Preset "${presetName}" applied.` };
-  // Note: Overall success is returned even if some individual windows/tabs failed.
-  // More granular error reporting could be added if needed.
 }
 
 async function deletePreset(presetName) {
@@ -296,7 +356,6 @@ async function deletePreset(presetName) {
   }
 }
 
-// Centralized error handling for message listener
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   const action = request.action;
   let promise;
@@ -310,39 +369,52 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       break;
     case "savePreset":
       if (!request.presetName || !request.layoutData) {
-        sendResponse({status: "error", message: "Preset name or layout data missing."});
-        return false; // Synchronous response
+        sendResponse({status: "error", message: "Preset name or layout data missing for save."});
+        return false; 
       }
-      promise = savePreset(request.presetName, request.layoutData); // savePreset now returns {success, message}
+      promise = savePreset(request.presetName, request.layoutData);
+      break;
+    case "updatePreset": 
+      if (!request.presetName || !request.layoutData) {
+        sendResponse({status: "error", message: "Preset name or layout data missing for update."});
+        return false;
+      }
+      promise = updatePreset(request.presetName, request.layoutData);
       break;
     case "getPresets":
       promise = getPresets().then(presets => ({ status: "success", presets: presets }));
       break;
+    case "importPresets": 
+      if (!request.data) {
+        sendResponse({status: "error", message: "No data provided for import."});
+        return false;
+      }
+      promise = importPresets(request.data);
+      break;
     case "applyPreset":
       if (!request.presetName) {
-        sendResponse({status: "error", message: "Preset name missing."});
-        return false; // Synchronous response
+        sendResponse({status: "error", message: "Preset name missing for apply."});
+        return false; 
       }
-      promise = applyPreset(request.presetName); // applyPreset now returns {success, message}
+      promise = applyPreset(request.presetName); 
       break;
     case "deletePreset":
       if (!request.presetName) {
-        sendResponse({status: "error", message: "Preset name missing for deletion."});
-        return false; // Synchronous response
+        sendResponse({status: "error", message: "Preset name missing for delete."});
+        return false; 
       }
-      promise = deletePreset(request.presetName); // deletePreset now returns {success, message}
+      promise = deletePreset(request.presetName); 
       break;
     default:
       console.warn("Unknown action received:", request.action);
       sendResponse({status: "error", message: `Unknown action: ${request.action}`});
-      return false; // Synchronous response for unknown action
+      return false; 
   }
 
   promise.then(response => {
-    // If response is already in {status, message/data} format from functions like savePreset, applyPreset
-    if (typeof response.status !== 'undefined') {
+    if (typeof response.status !== 'undefined' || typeof response.success !== 'undefined') { 
         sendResponse(response);
-    } else { // For functions that just return data on success (like original getPresets)
+    } else { 
         sendResponse({ status: "success", ...response });
     }
   }).catch(error => {
@@ -350,5 +422,42 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({status: "error", message: `Internal error processing ${action}: ${error.message}`});
   });
 
-  return true; // Indicates asynchronous response
+  return true; 
+});
+
+// Listener for keyboard shortcuts
+chrome.commands.onCommand.addListener(async (command) => {
+  console.log(`Command received: ${command}`);
+  try {
+    const presets = await getPresets();
+    if (!presets || Object.keys(presets).length === 0) {
+      console.log("No presets available to apply via shortcut.");
+      return;
+    }
+
+    const sortedPresetNames = Object.keys(presets).sort();
+    let presetToApplyName = null;
+
+    if (command === "apply-preset-1" && sortedPresetNames.length > 0) {
+      presetToApplyName = sortedPresetNames[0];
+    } else if (command === "apply-preset-2" && sortedPresetNames.length > 1) {
+      presetToApplyName = sortedPresetNames[1];
+    } else if (command === "apply-preset-3" && sortedPresetNames.length > 2) {
+      presetToApplyName = sortedPresetNames[2];
+    }
+
+    if (presetToApplyName) {
+      console.log(`Applying preset "${presetToApplyName}" via command "${command}"`);
+      const result = await applyPreset(presetToApplyName);
+      if (result && result.success) {
+        console.log(`Successfully applied preset "${presetToApplyName}" via command.`);
+      } else {
+        console.error(`Failed to apply preset "${presetToApplyName}" via command. Message: ${result ? result.message : 'Unknown error'}`);
+      }
+    } else {
+      console.log(`No preset available for command "${command}" (Index out of bounds or no presets). Total presets: ${sortedPresetNames.length}`);
+    }
+  } catch (error) {
+    console.error(`Error handling command "${command}":`, error.message, error.stack);
+  }
 });

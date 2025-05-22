@@ -1,7 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
   const saveButton = document.getElementById('save-options-btn');
-  const optionsForm = document.getElementById('options-form'); // Keep for potential future use
+  const optionsForm = document.getElementById('options-form'); 
   const statusMessageDiv = document.getElementById('options-status-message');
+  
+  const exportPresetsBtn = document.getElementById('export-presets-btn');
+  const importFileInput = document.getElementById('import-file-input');
+  const importPresetsBtn = document.getElementById('import-presets-btn');
+  const goToShortcutsBtn = document.getElementById('go-to-shortcuts-btn'); // Get the new button
+
   let statusTimeout = null; 
 
   function displayOptionsStatus(message, isError = false, duration = 3000) {
@@ -51,32 +57,128 @@ document.addEventListener('DOMContentLoaded', () => {
         const errorMessage = `Error loading options: ${chrome.runtime.lastError.message}`;
         displayOptionsStatus(errorMessage, true);
         console.error(errorMessage);
-        // Attempt to set a default even if loading fails, so the UI is in a known state.
         const defaultBehaviorRadio = document.querySelector(`input[name="preset-behavior"][value="close_all"]`);
         if (defaultBehaviorRadio) defaultBehaviorRadio.checked = true;
         return;
       }
-      const behaviorRadio = document.querySelector(`input[name="preset-behavior"][value="${items.presetBehavior}"]`);
+      
+      const currentBehavior = items.presetBehavior;
+      const behaviorRadio = document.querySelector(`input[name="preset-behavior"][value="${currentBehavior}"]`);
+      
       if (behaviorRadio) {
         behaviorRadio.checked = true;
       } else {
-        // If the stored value is somehow invalid, default to 'close_all'
-        console.warn(`Stored presetBehavior "${items.presetBehavior}" is invalid. Defaulting to "close_all".`);
+        console.warn(`Stored presetBehavior "${currentBehavior}" is invalid or not found. Defaulting to "close_all".`);
         const defaultBehaviorRadio = document.querySelector(`input[name="preset-behavior"][value="close_all"]`);
         if (defaultBehaviorRadio) defaultBehaviorRadio.checked = true;
-        // Optionally inform the user about the default being applied due to invalid stored value
-        // displayOptionsStatus('Invalid saved option found, default applied.', true, 4000);
       }
     });
   }
 
-  // Initial load of options
-  if(statusMessageDiv && optionsForm) { // Check if essential elements are present
+  // Export Presets Logic
+  if (exportPresetsBtn) {
+    exportPresetsBtn.addEventListener('click', () => {
+      chrome.runtime.sendMessage({ action: "getPresets" }, (response) => {
+        if (chrome.runtime.lastError) {
+          displayOptionsStatus(`Error exporting presets: ${chrome.runtime.lastError.message}`, true);
+          console.error("Export error (lastError):", chrome.runtime.lastError.message);
+          return;
+        }
+        if (response && response.status === "success" && response.presets) {
+          if (Object.keys(response.presets).length === 0) {
+            displayOptionsStatus("No presets to export.", false, 2000);
+            return;
+          }
+          try {
+            const jsonString = JSON.stringify(response.presets, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'window-presets.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            displayOptionsStatus('Presets exported successfully.', false);
+          } catch (e) {
+            displayOptionsStatus(`Error during export process: ${e.message}`, true);
+            console.error("Export process error:", e);
+          }
+        } else {
+          displayOptionsStatus(`Failed to get presets for export: ${response ? response.message : 'Unknown error'}`, true);
+        }
+      });
+    });
+  } else {
+    console.error("Export presets button not found.");
+  }
+
+  // Import Presets Logic
+  if (importPresetsBtn && importFileInput) {
+    importPresetsBtn.addEventListener('click', () => {
+      const file = importFileInput.files[0];
+      if (!file) {
+        displayOptionsStatus('Please select a file to import.', true);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const importedPresetsData = JSON.parse(event.target.result);
+          if (typeof importedPresetsData !== 'object' || importedPresetsData === null) {
+            displayOptionsStatus('Invalid file format: Not a valid JSON object.', true);
+            return;
+          }
+          
+          chrome.runtime.sendMessage({ action: "importPresets", data: importedPresetsData }, (response) => {
+            if (chrome.runtime.lastError) {
+              displayOptionsStatus(`Error importing presets: ${chrome.runtime.lastError.message}`, true);
+              console.error("Import error (lastError):", chrome.runtime.lastError.message);
+              return;
+            }
+            if (response && response.success) {
+              displayOptionsStatus(response.message || 'Presets imported successfully.', false);
+            } else {
+              displayOptionsStatus(`Failed to import presets: ${response ? response.message : 'Unknown error'}`, true);
+            }
+            importFileInput.value = ''; 
+          });
+
+        } catch (e) {
+          displayOptionsStatus(`Error parsing JSON file: ${e.message}`, true);
+          console.error("JSON parsing error:", e);
+          importFileInput.value = ''; 
+        }
+      };
+      reader.onerror = () => {
+        displayOptionsStatus(`Error reading file: ${reader.error.message}`, true);
+        console.error("File reading error:", reader.error);
+        importFileInput.value = ''; 
+      };
+      reader.readAsText(file);
+    });
+  } else {
+    if(!importPresetsBtn) console.error("Import presets button not found.");
+    if(!importFileInput) console.error("Import file input not found.");
+  }
+
+  // Keyboard shortcuts link
+  if (goToShortcutsBtn) {
+    goToShortcutsBtn.addEventListener('click', () => {
+      chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+    });
+  } else {
+    console.error("Go to shortcuts button not found.");
+  }
+
+  // Initial load of other options
+  if(statusMessageDiv && optionsForm) { 
     loadOptions();
   } else {
       if(!statusMessageDiv) console.error("Element with ID 'options-status-message' not found.");
       if(!optionsForm) console.error("Element with ID 'options-form' not found.");
-      // Potentially display a global error if basic elements are missing, though this is unlikely if HTML is correct.
   }
 
   if (saveButton) {
