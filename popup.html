@@ -1,40 +1,35 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Window Layout Manager</title>
+  <title>Window Layout Manager - Quick Save</title>
   <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <body>
-  <h1>Window Layout Manager</h1>
+  <h1>Quick Save Preset</h1>
 
-  <div id="status-message" class="status"></div> <!-- Status message div -->
+  <div id="status-message" class="status"></div>
 
   <div class="section" id="capture-layout-section">
-    <h2>Capture & Save</h2>
     <button id="capture-layout-btn" class="secondary">Capture Current Window Layout</button>
-    <div class="input-group"> <!-- Changed to input-group for better flex layout -->
-      <input type="text" id="preset-name-input" placeholder="Enter preset name..." />
-      <button id="save-layout-btn">Save Captured Layout</button>
+    <div class="input-group" style="margin-top: 15px;"> 
+      <input type="text" id="preset-name-input" placeholder="Enter new preset name..." />
+      <button id="save-layout-btn">Save New Preset</button>
     </div>
   </div>
 
   <div class="section">
-    <h2>Saved Presets</h2>
-    <div id="presets-list">
-      <!-- Presets will be listed here by popup.js -->
-      <!-- Example of how JS will render it:
-      <ul>
-        <li>
-          <span class="preset-name">My Favorite Setup</span>
-          <div class="button-group">
-            <button class="apply-preset-btn">Apply</button>
-            <button class="delete-btn">Delete</button>
-          </div>
-        </li>
-      </ul>
-      -->
+    <h2>Quick Apply</h2>
+    <div id="quick-apply-buttons" class="button-group vertical">
+      <!-- Quick apply buttons will be added here by JavaScript -->
     </div>
   </div>
+
+  <!-- 
+    Instructions or link to side panel can be added here if desired, for example:
+    <p style="text-align: center; margin-top: 15px; font-size: 0.9em;">
+      Manage your saved presets in the <a href="#" id="open-side-panel-link">Side Panel</a>.
+    </p>
+  -->
 
   <script src="popup.js"></script>
 </body>

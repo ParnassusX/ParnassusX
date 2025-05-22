@@ -356,6 +356,13 @@ async function deletePreset(presetName) {
   }
 }
 
+// Side Panel Setup
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.sidePanel
+    .setPanelBehavior({ openPanelOnActionClick: true })
+    .catch((error) => console.error('Error setting side panel behavior:', error));
+});
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   const action = request.action;
   let promise;

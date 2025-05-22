@@ -10,6 +10,7 @@
   --medium-gray-color: #e9ecef;
   --dark-gray-color: #6c757d;
   --text-color: #343a40;
+  --text-secondary-color: #6c757d; 
   --border-radius: 0.3rem;
   --box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -18,13 +19,20 @@
 body {
   font-family: var(--font-family);
   margin: 0;
-  padding: 15px; /* Default padding */
+  padding: 15px; 
   background-color: var(--light-gray-color);
   color: var(--text-color);
-  min-width: 350px; /* For popup */
+  min-width: 350px; 
 }
 
-/* Specific body styling for options page for better centering */
+body.sidepanel-body { 
+  padding: 0; 
+  display: flex;
+  flex-direction: column;
+  height: 100vh; 
+  min-width: 320px; 
+}
+
 body.options-page {
   display: flex;
   flex-direction: column;
@@ -32,9 +40,9 @@ body.options-page {
   padding-top: 20px;
 }
 
-.container { /* Used for options page content */
+.container { 
   width: 100%;
-  max-width: 700px; /* Max width for options page content */
+  max-width: 700px; 
 }
 
 h1 {
@@ -50,24 +58,25 @@ h2 {
   color: var(--text-color);
   border-bottom: 1px solid var(--medium-gray-color);
   padding-bottom: 8px;
-  margin-top: 25px;
+  margin-top: 20px; 
   margin-bottom: 15px;
 }
 
-/* Sections / Cards */
 .section {
-  margin-bottom: 25px;
+  margin-bottom: 20px; 
   background-color: #ffffff;
-  padding: 20px;
+  padding: 15px; 
   border-radius: var(--border-radius);
   box-shadow: var(--box-shadow);
 }
+.section:first-child {
+    margin-top: 0; 
+}
 
-/* Buttons */
 button {
   font-family: var(--font-family);
   padding: 10px 15px;
-  margin: 5px;
+  margin: 5px 0; 
   border: none;
   background-color: var(--primary-color);
   color: white;
@@ -76,6 +85,7 @@ button {
   font-size: 0.95em;
   transition: background-color 0.2s ease-in-out;
   text-align: center;
+  width: 100%; 
 }
 
 button:hover {
@@ -87,7 +97,6 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Secondary button style (e.g., capture layout) */
 button.secondary {
     background-color: var(--dark-gray-color);
     color: white;
@@ -96,23 +105,20 @@ button.secondary:hover {
     background-color: #5a6268;
 }
 
-
 button.delete-btn {
   background-color: var(--danger-color);
 }
-
 button.delete-btn:hover {
   background-color: var(--danger-hover-color);
 }
 
-/* Input Fields */
 input[type="text"] {
   font-family: var(--font-family);
   padding: 10px;
   margin-bottom: 10px;
   border: 1px solid var(--medium-gray-color);
   border-radius: var(--border-radius);
-  width: calc(100% - 22px); /* Account for padding and border */
+  width: 100%; 
   box-sizing: border-box;
   font-size: 0.95em;
 }
@@ -121,136 +127,184 @@ input[type="text"]:focus {
   box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
   outline: none;
 }
+input[type="file"] {
+    font-size: 0.9em;
+    padding: 5px;
+    margin: 10px 0; /* Standardized margin */
+    display: block; 
+    width: 100%;
+}
 
-/* Capture Layout Section - Flex layout for input and button */
-#capture-layout-section div {
+/* Popup Specifics */
+#capture-layout-section .input-group { /* Class selector */
   display: flex;
-  align-items: center;
-  gap: 10px; /* Space between input and button */
+  flex-direction: column; 
+  gap: 10px;
+  margin-top: 15px; /* Moved from inline style */
 }
 #capture-layout-section input[type="text"] {
-  flex-grow: 1; /* Input takes available space */
-  margin-bottom: 0; /* Remove bottom margin as it's handled by gap */
-}
-#capture-layout-section button {
-  white-space: nowrap; /* Prevent button text from wrapping */
+  margin-bottom: 0; 
 }
 
+#quick-apply-buttons {
+  margin-top: 10px;
+  display: flex; 
+  flex-direction: column;
+  gap: 8px; 
+}
 
-/* Presets List */
-#presets-list ul {
+.quick-apply-btn {
+  /* Styling is primarily from button.secondary */
+}
+
+.info-text { 
+    font-size: 0.9em;
+    color: var(--text-secondary-color); 
+    text-align: center;
+    margin: 10px 0; /* Standardized margin */
+    padding: 5px 0; 
+}
+
+/* Side Panel Navigation & Views */
+.sidepanel-nav {
+  display: flex;
+  justify-content: space-around;
+  background-color: var(--medium-gray-color);
+  padding: 5px 0;
+  flex-shrink: 0; 
+}
+.nav-button {
+  padding: 8px 10px;
+  border: none;
+  background-color: transparent;
+  color: var(--text-color);
+  cursor: pointer;
+  font-size: 0.9em;
+  flex-grow: 1;
+  text-align: center;
+  border-bottom: 3px solid transparent;
+  margin:0; 
+  border-radius: 0; 
+}
+.nav-button.active {
+  background-color: var(--light-gray-color);
+  border-bottom-color: var(--primary-color);
+  font-weight: bold;
+}
+.nav-button:hover:not(.active) {
+    background-color: #d3d9df;
+}
+
+.view-container {
+  padding: 10px; 
+  flex-grow: 1; 
+  overflow-y: auto; 
+}
+.view {
+  display: none; 
+}
+.view.active {
+  display: block; 
+}
+
+#sidepanel-presets-list ul {
   list-style-type: none;
   padding: 0;
   margin: 0;
 }
-
-#presets-list li {
-  padding: 12px 0;
+#sidepanel-presets-list li {
+  padding: 10px 5px; 
   border-bottom: 1px solid var(--medium-gray-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 10px; /* Gap between preset name and button group */
+  gap: 8px; 
 }
-
-#presets-list li:last-child {
+#sidepanel-presets-list li:last-child {
   border-bottom: none;
 }
-
-#presets-list .preset-name {
+#sidepanel-presets-list .preset-name {
   flex-grow: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 1em;
+  font-size: 0.95em; 
 }
-
-#presets-list .button-group {
+#sidepanel-presets-list .button-group {
   display: flex;
   align-items: center;
-  flex-shrink: 0; /* Prevent button group from shrinking */
+  flex-shrink: 0; 
+}
+#sidepanel-presets-list .button-group button { 
+  padding: 5px 8px; 
+  font-size: 0.8em; 
+  margin: 0 0 0 4px; /* Reset default button margin, apply only left */
+  width: auto; 
 }
 
-#presets-list .button-group button {
-  padding: 6px 10px; /* Smaller buttons for list items */
-  font-size: 0.85em;
-  margin-left: 5px;
-}
-
-/* Status Messages */
-.status {
-  padding: 12px 15px;
-  margin-bottom: 20px;
+.status { 
+  padding: 10px 15px; 
+  margin-bottom: 15px; 
   border-radius: var(--border-radius);
-  font-size: 0.95em;
+  font-size: 0.9em; 
   text-align: center;
-  opacity: 0; /* Hidden by default, shown by JS */
-  transition: opacity 0.3s ease-in-out;
+  opacity: 0; 
+  transition: opacity 0.3s ease-in-out, max-height 0.3s ease-in-out; 
   border: 1px solid transparent;
+  max-height: 0; 
+  overflow: hidden;
 }
 .status.visible {
     opacity: 1;
+    max-height: 100px; 
 }
-
 .status-success {
   background-color: #d4edda;
   color: #155724;
   border-color: #c3e6cb;
 }
-
 .status-error {
   background-color: #f8d7da;
   color: #721c24;
   border-color: #f5c6cb;
 }
 
-/* Options Page Specifics */
-#options-form div {
-  margin-bottom: 12px; /* Space between radio options */
+/* Side Panel Forms */
+#settings-form div {
+  margin-bottom: 10px; 
   display: flex;
   align-items: center;
 }
-
-#options-form input[type="radio"] {
+#settings-form input[type="radio"] {
   margin-right: 8px;
-  accent-color: var(--primary-color); /* Modern way to color radio/checkbox */
+  accent-color: var(--primary-color); 
 }
-
-#options-form label {
-  font-size: 0.95em;
+#settings-form label {
+  font-size: 0.9em; 
   cursor: pointer;
 }
 
-#save-options-btn {
-  display: block; /* Make it a block to center it */
-  margin: 20px auto 0 auto; /* Center the save button */
+#save-settings-btn { 
+  display: block; 
+  margin: 15px auto 0 auto; 
   min-width: 150px;
+  width: auto; 
 }
 
-/* Ensure popup specific button IDs also get base styling if needed */
-#capture-layout-btn, #save-layout-btn {
-    width: 100%; /* Make buttons in popup take full width of their container */
-    margin-top: 5px;
-    margin-bottom: 5px;
-}
-#capture-layout-btn { /* Make capture button secondary */
-    background-color: var(--dark-gray-color);
-}
-#capture-layout-btn:hover {
-    background-color: #5a6268;
+#refresh-presets-btn {
+    margin-bottom: 10px;
 }
 
-/* For the div containing preset name input and save button in popup */
-.input-group {
+#import-export-view button { 
+    /* Default margin is 5px 0, fine for stacked */
+}
+
+/* Vertical button group (used in Quick Apply) */
+.button-group.vertical {
     display: flex;
-    flex-direction: column; /* Stack input and button vertically */
-    gap: 10px;
-    margin-top: 10px;
+    flex-direction: column;
+    gap: 8px; /* Use gap for spacing */
 }
-.input-group input[type="text"]{
-    width: 100%; /* Ensure input takes full width */
-    margin-bottom: 0; /* Reset margin as gap is used */
-}
-.input-group button {
-    width: 100%; /* Button takes full width */
+.button-group.vertical button {
+    margin: 0; /* Remove individual margins if gap is used */
 }
