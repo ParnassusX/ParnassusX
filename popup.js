@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const topPresets = sortedPresetNames.slice(0, 3);
 
           if (topPresets.length === 0) {
-            quickApplyContainer.innerHTML = '<p class="info-text">No presets saved yet.</p>';
+            quickApplyContainer.innerHTML = '<p class="info-text">No presets saved yet. Use "Save New Preset" above to create one.</p>';
             return;
           }
 
