@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   // General Elements
-  const statusMessageDiv = document.getElementById('sidepanel-status-message'); 
+  const statusMessageDiv = document.getElementById('sidepanel-status-message');
   let statusTimeout = null;
 
   // Navigation Elements
@@ -11,11 +11,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const presetsView = document.getElementById('presets-view');
   const presetsListDiv = document.getElementById('sidepanel-presets-list');
   const refreshPresetsBtn = document.getElementById('refresh-presets-btn');
-  
+
   // Settings View Elements
   const settingsView = document.getElementById('settings-view');
-  const saveSettingsBtn = document.getElementById('save-settings-btn'); 
-  const settingsForm = document.getElementById('settings-form'); 
+  const saveSettingsBtn = document.getElementById('save-settings-btn');
+  const settingsForm = document.getElementById('settings-form');
 
   // Import/Export View Elements
   const importExportView = document.getElementById('import-export-view');
@@ -27,10 +27,10 @@ document.addEventListener('DOMContentLoaded', () => {
   navButtons.forEach(button => {
     button.addEventListener('click', () => {
       const viewId = button.getAttribute('data-view');
-      
+
       navButtons.forEach(btn => btn.classList.remove('active'));
       button.classList.add('active');
-      
+
       views.forEach(view => {
         if (view.id === viewId) {
           view.classList.add('active');
@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
           view.classList.remove('active');
         }
       });
-      if (statusMessageDiv) statusMessageDiv.className = 'status'; 
+      if (statusMessageDiv) statusMessageDiv.className = 'status';
     });
   });
 
@@ -51,19 +51,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (targetDiv === statusMessageDiv && statusTimeout) {
       clearTimeout(statusTimeout);
     }
-    
+
     targetDiv.textContent = message;
     targetDiv.className = 'status visible ' + (isError ? 'status-error' : 'status-success');
-    
+
     const currentTimeout = setTimeout(() => {
-        targetDiv.className = 'status'; 
+        targetDiv.className = 'status';
     }, duration);
 
     if (targetDiv === statusMessageDiv) {
         statusTimeout = currentTimeout;
     }
   }
-  
+
   // --- Generic Chrome Message Response Handler ---
   function handleResponse(response, successCallback, errorPrefix = "Error", statusTargetDiv = statusMessageDiv) {
     if (chrome.runtime.lastError) {
@@ -74,10 +74,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (response && response.status === "error") {
       displayStatus(`${errorPrefix}: ${response.message || 'Unknown error from background.'}`, true, 5000, statusTargetDiv);
       console.error(`${errorPrefix} (response.status):`, response.message);
-    } else if (response && (response.status === "success" || response.success)) { 
+    } else if (response && (response.status === "success" || response.success)) {
       if (successCallback) successCallback(response);
     } else {
-      if (response && typeof response.presets !== 'undefined' && successCallback) { 
+      if (response && typeof response.presets !== 'undefined' && successCallback) {
         successCallback(response);
       } else if (response && typeof response.layout !== 'undefined' && successCallback) {
          successCallback(response);
@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const updateBtn = document.createElement('button');
     updateBtn.textContent = 'Update';
-    updateBtn.classList.add('update-btn'); 
+    updateBtn.classList.add('update-btn');
     updateBtn.setAttribute('data-preset-name', presetName);
     updateBtn.title = `Capture current layout and update preset: ${presetName}`; // Tooltip
     updateBtn.addEventListener('click', (event) => {
@@ -150,11 +150,11 @@ document.addEventListener('DOMContentLoaded', () => {
       chrome.runtime.sendMessage({ action: "deletePreset", presetName: name }, (deleteResponse) => {
         handleResponse(deleteResponse, (delResp) => {
           displayStatus(delResp.message || `Preset "${name}" deleted successfully.`, false);
-          loadPresets(); 
+          loadPresets();
         }, `Error deleting "${name}"`);
       });
     });
-    
+
     buttonGroupDiv.appendChild(updateBtn);
     buttonGroupDiv.appendChild(applyBtn);
     buttonGroupDiv.appendChild(deleteBtn);
@@ -170,8 +170,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     chrome.runtime.sendMessage({ action: "getPresets" }, (response) => {
       handleResponse(response, (r) => {
-        presetsListDiv.innerHTML = ''; 
-        const presets = r.presets; 
+        presetsListDiv.innerHTML = '';
+        const presets = r.presets;
         if (presets && Object.keys(presets).length > 0) {
           const ul = document.createElement('ul');
           const sortedPresetNames = Object.keys(presets).sort();
@@ -180,7 +180,8 @@ document.addEventListener('DOMContentLoaded', () => {
           });
           presetsListDiv.appendChild(ul);
         } else {
-          presetsListDiv.innerHTML = '<p class="info-text">No presets saved. Use the extension popup (browser toolbar icon) to save a new preset.</p>';
+          presetsListDiv.innerHTML = `<p class="info-text">No presets saved yet.<br>
+                To get started: Click the extension icon in your Chrome toolbar to open the popup, capture your current window layout, and save your first preset. You'll see it appear here!</p>`;
         }
       }, "Error loading presets list");
     });
@@ -191,11 +192,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Settings View Logic ---
-  function saveSettings(event) { 
-    if(event) event.preventDefault(); 
+  function saveSettings(event) {
+    if(event) event.preventDefault();
     const presetBehaviorInput = document.querySelector('#settings-form input[name="preset-behavior"]:checked');
     if (!presetBehaviorInput) {
-      displayStatus('Please select a preset application behavior.', true, 5000); 
+      displayStatus('Please select a preset application behavior.', true, 5000);
       return;
     }
     const presetBehavior = presetBehaviorInput.value;
@@ -208,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function loadSettings() { 
+  function loadSettings() {
     chrome.storage.sync.get({ presetBehavior: 'close_all' }, (items) => {
       if (chrome.runtime.lastError) {
         displayStatus(`Error loading settings: ${chrome.runtime.lastError.message}`, true, 5000);
@@ -271,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
             handleResponse(response, (r) => {
               displayStatus(r.message || 'Presets imported successfully.', false, 3000);
               if (presetsView && presetsView.classList.contains('active')) { // Only load if presets view is active
-                 loadPresets(); 
+                 loadPresets();
               }
             }, "Import error");
             importFileInput.value = '';
@@ -283,20 +284,20 @@ document.addEventListener('DOMContentLoaded', () => {
       };
       reader.onerror = () => {
         displayStatus(`Error reading file: ${reader.error.message}`, true, 5000);
-        importFileInput.value = ''; 
+        importFileInput.value = '';
       };
       reader.readAsText(file);
     });
   }
-  
+
   // --- Initialization ---
-  if (presetsListDiv && statusMessageDiv) { 
+  if (presetsListDiv && statusMessageDiv) {
     loadPresets();
   }
-  if (settingsForm && statusMessageDiv) { 
-      loadSettings(); 
+  if (settingsForm && statusMessageDiv) {
+      loadSettings();
   }
-  
+
   chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local' && changes.presets) {
         console.log("Presets changed in storage, refreshing side panel preset list.");

@@ -5,8 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusMessageDiv = document.getElementById('status-message');
   const quickApplyContainer = document.getElementById('quick-apply-buttons');
 
-  let capturedLayout = null; 
-  let statusTimeout = null; 
+  let capturedLayout = null;
+  let statusTimeout = null;
 
   function displayStatus(message, isError = false, duration = 5000) {
     if (!statusMessageDiv) {
@@ -14,13 +14,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
     if (statusTimeout) {
-      clearTimeout(statusTimeout); 
+      clearTimeout(statusTimeout);
     }
     statusMessageDiv.textContent = message;
     statusMessageDiv.className = 'status visible ' + (isError ? 'status-error' : 'status-success');
-    
+
     statusTimeout = setTimeout(() => {
-      statusMessageDiv.className = 'status'; 
+      statusMessageDiv.className = 'status';
     }, duration);
   }
 
@@ -35,13 +35,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const errorMessage = `${errorPrefix}: ${response.message || 'Unknown error from background.'}`;
       displayStatus(errorMessage, true);
       console.error(errorMessage);
-    } else if (response && (response.status === "success" || response.success)) { 
+    } else if (response && (response.status === "success" || response.success)) {
       if (successCallback) successCallback(response); // Pass full response for more flexibility
     } else {
-      if (response && typeof response.layout !== 'undefined' && successCallback) { 
+      if (response && typeof response.layout !== 'undefined' && successCallback) {
          successCallback(response);
       } else if (response && typeof response.presets !== 'undefined' && successCallback) {
-         successCallback(response); 
+         successCallback(response);
       }
       else {
         const errorMessage = `Unexpected response structure from ${errorPrefix}.`;
@@ -56,19 +56,19 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("Quick apply container not found.");
         return;
     }
-    quickApplyContainer.innerHTML = ''; 
+    quickApplyContainer.innerHTML = '';
 
     chrome.runtime.sendMessage({ action: "getPresets" }, function(response) {
       if (chrome.runtime.lastError) {
-        handleResponse({ status: 'error', message: chrome.runtime.lastError.message }, 
-                       (r) => displayStatus(r.message, true), 
+        handleResponse({ status: 'error', message: chrome.runtime.lastError.message },
+                       (r) => displayStatus(r.message, true),
                        "Error loading presets");
         quickApplyContainer.innerHTML = '<p class="info-text">Could not load presets.</p>';
         return;
       }
-      handleResponse(response, 
-        (r) => { 
-          const presets = r.presets || r; 
+      handleResponse(response,
+        (r) => {
+          const presets = r.presets || r;
           if (!presets || typeof presets !== 'object') { // Check if presets is an object
             displayStatus("Error: Invalid presets data received.", true);
             quickApplyContainer.innerHTML = '<p class="info-text">Could not load presets.</p>';
@@ -79,7 +79,10 @@ document.addEventListener('DOMContentLoaded', () => {
           const topPresets = sortedPresetNames.slice(0, 3);
 
           if (topPresets.length === 0) {
-            quickApplyContainer.innerHTML = '<p class="info-text">No presets saved yet. Use "Save New Preset" above to create one.</p>';
+            quickApplyContainer.innerHTML = `<p class="info-text">Welcome! 👋<br>
+                1. Arrange your windows as you like them.<br>
+                2. Click "Capture Current Window Layout" above.<br>
+                3. Give your layout a name and click "Save New Preset".</p>`;
             return;
           }
 
@@ -87,25 +90,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const button = document.createElement('button');
             const displayName = presetName.length > 25 ? presetName.substring(0, 22) + "..." : presetName;
             button.textContent = `Apply "${displayName}"`;
-            button.title = `Apply preset: ${presetName}`; 
-            button.classList.add('quick-apply-btn', 'secondary'); 
-            button.dataset.presetName = presetName; 
+            button.title = `Apply preset: ${presetName}`;
+            button.classList.add('quick-apply-btn', 'secondary');
+            button.dataset.presetName = presetName;
 
             button.addEventListener('click', function() {
               const nameToApply = this.dataset.presetName;
               displayStatus(`Applying preset "${nameToApply}"...`, false, 2000);
               chrome.runtime.sendMessage({ action: "applyPreset", presetName: nameToApply }, function(applyResponse) {
-                handleResponse(applyResponse, 
-                               (resp) => { 
-                                 displayStatus(resp.message || `Preset "${nameToApply}" applied.`, false); 
-                                 setTimeout(() => window.close(), 1200); 
-                               }, 
+                handleResponse(applyResponse,
+                               (resp) => {
+                                 displayStatus(resp.message || `Preset "${nameToApply}" applied.`, false);
+                                 setTimeout(() => window.close(), 1200);
+                               },
                                `Error applying "${nameToApply}"`);
               });
             });
             quickApplyContainer.appendChild(button);
           });
-        }, 
+        },
         "Error loading presets for Quick Apply"
       );
       if (!(response && (response.status === 'success' || response.success))) {
@@ -119,9 +122,9 @@ document.addEventListener('DOMContentLoaded', () => {
       displayStatus('Capturing layout...', false, 2000);
       chrome.runtime.sendMessage({ action: "captureLayout" }, (response) => {
         handleResponse(response, (r) => {
-          capturedLayout = r.layout; 
+          capturedLayout = r.layout;
           displayStatus(r.message || 'Layout captured! Enter name and save.', false);
-          console.log("Captured layout in popup:", capturedLayout); 
+          console.log("Captured layout in popup:", capturedLayout);
         }, "Error capturing layout");
         if (!(response && (response.status === "success" || response.success) && response.layout)) {
             capturedLayout = null;
@@ -143,17 +146,17 @@ document.addEventListener('DOMContentLoaded', () => {
         displayStatus('Please capture a layout first. Click "Capture Current Window Layout".', true);
         return;
       }
-      
-      const layoutDataToSave = capturedLayout; 
+
+      const layoutDataToSave = capturedLayout;
 
       chrome.runtime.sendMessage({ action: "savePreset", presetName: presetName, layoutData: layoutDataToSave }, (response) => {
         handleResponse(response, (r) => {
           // Use the message from background.js as it's specific (saved or updated)
           displayStatus(r.message || `Preset "${presetName}" processed successfully!`, false);
-          if(presetNameInput) presetNameInput.value = ''; 
-          capturedLayout = null; 
+          if(presetNameInput) presetNameInput.value = '';
+          capturedLayout = null;
           // Refresh Quick Apply buttons after successful save, ensuring user sees confirmation first
-          loadQuickApplyButtons(); 
+          loadQuickApplyButtons();
         }, `Error saving preset "${presetName}"`);
       });
     });
@@ -163,6 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if(!statusMessageDiv) console.error("Element with ID 'status-message' not found.");
   if(!presetNameInput) console.error("Element with ID 'preset-name-input' not found.");
-  
-  loadQuickApplyButtons(); 
+
+  loadQuickApplyButtons();
 });

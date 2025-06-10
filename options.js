@@ -1,14 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
   const saveButton = document.getElementById('save-options-btn');
-  const optionsForm = document.getElementById('options-form'); 
+  const optionsForm = document.getElementById('options-form');
   const statusMessageDiv = document.getElementById('options-status-message');
-  
+
   const exportPresetsBtn = document.getElementById('export-presets-btn');
   const importFileInput = document.getElementById('import-file-input');
   const importPresetsBtn = document.getElementById('import-presets-btn');
   const goToShortcutsBtn = document.getElementById('go-to-shortcuts-btn'); // Get the new button
 
-  let statusTimeout = null; 
+  let statusTimeout = null;
 
   function displayOptionsStatus(message, isError = false, duration = 3000) {
     if (!statusMessageDiv) {
@@ -20,16 +20,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     statusMessageDiv.textContent = message;
     statusMessageDiv.className = 'status visible ' + (isError ? 'status-error' : 'status-success');
-    
+
     statusTimeout = setTimeout(() => {
-      statusMessageDiv.className = 'status'; 
+      statusMessageDiv.className = 'status';
     }, duration);
   }
 
   function saveOptions(event) {
-    if(event) event.preventDefault(); 
+    if(event) event.preventDefault();
     const presetBehaviorInput = document.querySelector('input[name="preset-behavior"]:checked');
-    
+
     if (!presetBehaviorInput) {
       displayOptionsStatus('Please select a preset application behavior.', true);
       return;
@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function loadOptions() {
     chrome.storage.sync.get({
-      presetBehavior: 'close_all' 
+      presetBehavior: 'close_all'
     }, (items) => {
       if (chrome.runtime.lastError) {
         const errorMessage = `Error loading options: ${chrome.runtime.lastError.message}`;
@@ -61,10 +61,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (defaultBehaviorRadio) defaultBehaviorRadio.checked = true;
         return;
       }
-      
+
       const currentBehavior = items.presetBehavior;
       const behaviorRadio = document.querySelector(`input[name="preset-behavior"][value="${currentBehavior}"]`);
-      
+
       if (behaviorRadio) {
         behaviorRadio.checked = true;
       } else {
@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
             displayOptionsStatus('Invalid file format: Not a valid JSON object.', true);
             return;
           }
-          
+
           chrome.runtime.sendMessage({ action: "importPresets", data: importedPresetsData }, (response) => {
             if (chrome.runtime.lastError) {
               displayOptionsStatus(`Error importing presets: ${chrome.runtime.lastError.message}`, true);
@@ -143,19 +143,19 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
               displayOptionsStatus(`Failed to import presets: ${response ? response.message : 'Unknown error'}`, true);
             }
-            importFileInput.value = ''; 
+            importFileInput.value = '';
           });
 
         } catch (e) {
           displayOptionsStatus(`Error parsing JSON file: ${e.message}`, true);
           console.error("JSON parsing error:", e);
-          importFileInput.value = ''; 
+          importFileInput.value = '';
         }
       };
       reader.onerror = () => {
         displayOptionsStatus(`Error reading file: ${reader.error.message}`, true);
         console.error("File reading error:", reader.error);
-        importFileInput.value = ''; 
+        importFileInput.value = '';
       };
       reader.readAsText(file);
     });
@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Initial load of other options
-  if(statusMessageDiv && optionsForm) { 
+  if(statusMessageDiv && optionsForm) {
     loadOptions();
   } else {
       if(!statusMessageDiv) console.error("Element with ID 'options-status-message' not found.");

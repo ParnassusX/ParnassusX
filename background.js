@@ -50,20 +50,20 @@ async function captureCurrentWindowLayout() {
     const sanitizedWindows = windows.map(win => {
       const { alwaysOnTop, ...relevantWindowProps } = win;
       return {
-        ...relevantWindowProps, 
+        ...relevantWindowProps,
         displayId: getDisplayForWindow(win, displays),
         tabs: (win.tabs || []).filter(tab => typeof tab.url === 'string' && tab.url.length > 0 && !tab.url.startsWith("chrome-extension://"))
                        .map(tab => ({
                          url: tab.url,
-                         active: tab.active || false, 
-                         pinned: tab.pinned || false  
+                         active: tab.active || false,
+                         pinned: tab.pinned || false
                        })),
       };
     });
     return { windows: sanitizedWindows, displays };
   } catch (error) {
     console.error("Error in captureCurrentWindowLayout:", error.message, error.stack);
-    return { error: `Failed to capture layout: ${error.message}` }; 
+    return { error: `Failed to capture layout: ${error.message}` };
   }
 }
 
@@ -97,7 +97,7 @@ async function updatePreset(presetName, layoutData) {
     }
     const data = await chrome.storage.local.get('presets');
     const presets = data.presets || {};
-    
+
     presets[presetName] = layoutData;
     await chrome.storage.local.set({ presets });
     console.log(`Preset "${presetName}" updated successfully.`, presets);
@@ -115,7 +115,7 @@ async function getPresets() {
     return data.presets || {};
   } catch (error) {
     console.error("Error retrieving presets:", error.message, error.stack);
-    throw error; 
+    throw error;
   }
 }
 
@@ -144,7 +144,7 @@ async function importPresets(importedPresetsData) {
     }
 
     await chrome.storage.local.set({ presets: currentPresets });
-    
+
     let message = `${importedCount} preset(s) imported/updated successfully.`;
     if (skippedCount > 0) {
       message += ` ${skippedCount} preset(s) were skipped due to invalid structure.`;
@@ -174,13 +174,13 @@ async function applyPreset(presetName) {
       console.error("applyPreset: Error getting options from storage.sync:", error.message, error.stack);
       return { success: false, message: `Error getting extension options: ${error.message}` };
   }
-  
+
   const presetBehavior = options.presetBehavior;
   console.log(`Preset application behavior: ${presetBehavior}`);
 
   let allPresets;
   try {
-    allPresets = await getPresets(); 
+    allPresets = await getPresets();
   } catch (error) {
     return { success: false, message: `Failed to retrieve presets: ${error.message}` };
   }
@@ -204,7 +204,7 @@ async function applyPreset(presetName) {
     console.error("applyPreset: Error getting current display info:", error.message, error.stack);
     return { success: false, message: `Failed to get current display information: ${error.message}` };
   }
-  
+
   const primaryDisplay = currentDisplays.find(d => d.isPrimary) || currentDisplays[0];
 
   if (!primaryDisplay) {
@@ -226,10 +226,10 @@ async function applyPreset(presetName) {
             const hasPinnedTab = tabsInWindow.some(tab => tab.pinned);
             if (hasPinnedTab) {
               console.log(`Skipping closing window ID: ${win.id} (behavior: smart_close_pinned, has pinned tabs)`);
-              continue; 
+              continue;
             }
             console.log(`Closing window ID: ${win.id} (behavior: smart_close_pinned, no pinned tabs)`);
-          } else { 
+          } else {
             console.log(`Closing window ID: ${win.id} (behavior: close_all)`);
           }
           await chrome.windows.remove(win.id);
@@ -241,22 +241,22 @@ async function applyPreset(presetName) {
   } else if (presetBehavior === 'merge') {
     console.log("Skipping closing existing windows (behavior: merge).");
   }
-  
+
   for (const windowData of presetLayout.windows) {
     try {
       const urlsToOpen = (safeGet(windowData, 'tabs', []) || [])
                            .map(tab => safeGet(tab, 'url'))
                            .filter(url => typeof url === 'string' && url.length > 0);
 
-      if (urlsToOpen.length === 0 && typeof safeGet(windowData, 'appLaunchId') !== 'string') { 
+      if (urlsToOpen.length === 0 && typeof safeGet(windowData, 'appLaunchId') !== 'string') {
           console.warn("Window data in preset has no valid URLs or appLaunchId, skipping:", windowData);
           continue;
       }
 
       let targetLeft = safeGet(windowData, 'left', 100);
       let targetTop = safeGet(windowData, 'top', 100);
-      let targetWidth = Math.max(100, safeGet(windowData, 'width', 800)); 
-      let targetHeight = Math.max(100, safeGet(windowData, 'height', 600)); 
+      let targetWidth = Math.max(100, safeGet(windowData, 'width', 800));
+      let targetHeight = Math.max(100, safeGet(windowData, 'height', 600));
       let targetState = safeGet(windowData, 'state', "normal");
 
       const originalDisplayId = safeGet(windowData, 'displayId');
@@ -268,9 +268,9 @@ async function applyPreset(presetName) {
       } else {
           console.warn("Window data missing displayId. Attempting to match by coordinates or using primary.");
       }
-      
+
       if (!targetDisplay) targetDisplay = primaryDisplay;
-      
+
       const displayBounds = targetDisplay.workArea || targetDisplay.bounds;
       if(!displayBounds) {
           console.error("Target display has no bounds information. Skipping window.", targetDisplay);
@@ -281,7 +281,7 @@ async function applyPreset(presetName) {
       targetHeight = Math.min(targetHeight, displayBounds.height);
       targetLeft = Math.max(displayBounds.left, Math.min(targetLeft, displayBounds.left + displayBounds.width - targetWidth));
       targetTop = Math.max(displayBounds.top, Math.min(targetTop, displayBounds.top + displayBounds.height - targetHeight));
-      
+
       if (targetDisplay.id !== originalDisplayId || targetState === "minimized") {
           targetState = "normal";
       }
@@ -289,7 +289,7 @@ async function applyPreset(presetName) {
       console.log(`Adjusted window pos for display ${targetDisplay.id}: L:${targetLeft}, T:${targetTop}, W:${targetWidth}, H:${targetHeight}, S:${targetState}`);
 
       const createData = {
-        url: urlsToOpen.length > 0 ? urlsToOpen[0] : undefined, 
+        url: urlsToOpen.length > 0 ? urlsToOpen[0] : undefined,
         left: Math.round(targetLeft),
         top: Math.round(targetTop),
         width: Math.round(targetWidth),
@@ -297,15 +297,15 @@ async function applyPreset(presetName) {
         focused: safeGet(windowData, 'focused', false),
         state: targetState,
       };
-      if (safeGet(windowData, 'appLaunchId')) { 
-        delete createData.url; 
+      if (safeGet(windowData, 'appLaunchId')) {
+        delete createData.url;
         createData.appLaunchId = safeGet(windowData, 'appLaunchId');
       }
 
       const newWindow = await chrome.windows.create(createData);
 
       if (newWindow && newWindow.id) {
-        for (let i = (createData.url ? 1 : 0); i < urlsToOpen.length; i++) { 
+        for (let i = (createData.url ? 1 : 0); i < urlsToOpen.length; i++) {
           try {
             await chrome.tabs.create({
               windowId: newWindow.id,
@@ -377,11 +377,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     case "savePreset":
       if (!request.presetName || !request.layoutData) {
         sendResponse({status: "error", message: "Preset name or layout data missing for save."});
-        return false; 
+        return false;
       }
       promise = savePreset(request.presetName, request.layoutData);
       break;
-    case "updatePreset": 
+    case "updatePreset":
       if (!request.presetName || !request.layoutData) {
         sendResponse({status: "error", message: "Preset name or layout data missing for update."});
         return false;
@@ -391,7 +391,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     case "getPresets":
       promise = getPresets().then(presets => ({ status: "success", presets: presets }));
       break;
-    case "importPresets": 
+    case "importPresets":
       if (!request.data) {
         sendResponse({status: "error", message: "No data provided for import."});
         return false;
@@ -401,27 +401,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     case "applyPreset":
       if (!request.presetName) {
         sendResponse({status: "error", message: "Preset name missing for apply."});
-        return false; 
+        return false;
       }
-      promise = applyPreset(request.presetName); 
+      promise = applyPreset(request.presetName);
       break;
     case "deletePreset":
       if (!request.presetName) {
         sendResponse({status: "error", message: "Preset name missing for delete."});
-        return false; 
+        return false;
       }
-      promise = deletePreset(request.presetName); 
+      promise = deletePreset(request.presetName);
       break;
     default:
       console.warn("Unknown action received:", request.action);
       sendResponse({status: "error", message: `Unknown action: ${request.action}`});
-      return false; 
+      return false;
   }
 
   promise.then(response => {
-    if (typeof response.status !== 'undefined' || typeof response.success !== 'undefined') { 
+    if (typeof response.status !== 'undefined' || typeof response.success !== 'undefined') {
         sendResponse(response);
-    } else { 
+    } else {
         sendResponse({ status: "success", ...response });
     }
   }).catch(error => {
@@ -429,7 +429,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({status: "error", message: `Internal error processing ${action}: ${error.message}`});
   });
 
-  return true; 
+  return true;
 });
 
 // Listener for keyboard shortcuts
