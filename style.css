@@ -1,43 +1,96 @@
-/* Global Variables & Base Styles */
+/* --- Modern UI - 2025 --- */
+
+/* 1. Color Palette & Themes
+/* ========================================================================== */
+
+/* Light Theme (Default) */
 :root {
-  --primary-color: #007bff;
-  --primary-hover-color: #0056b3;
-  --danger-color: #dc3545;
-  --danger-hover-color: #c82333;
-  --success-color: #28a745;
-  --success-hover-color: #218838;
-  --light-gray-color: #f8f9fa;
-  --medium-gray-color: #e9ecef;
-  --dark-gray-color: #6c757d;
-  --text-color: #343a40;
-  --text-secondary-color: #6c757d;
-  --border-radius: 0.3rem;
-  --box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --color-bg: #f9f9fb;
+  --color-surface: #ffffff; /* For cards/sections */
+  --color-text-primary: #2d3748;
+  --color-text-secondary: #718096;
+  --color-border: #e2e8f0;
+
+  --color-primary: #4a69bd; /* Modern Slate Blue */
+  --color-primary-hover: #5c7edc;
+  --color-primary-text: #ffffff;
+
+  --color-danger: #e53e3e;
+  --color-danger-hover: #c53030;
+  --color-danger-text: #ffffff;
+
+  --color-success-bg: #d4edda;
+  --color-success-text: #155724;
+  --color-success-border: #c3e6cb;
+
+  --color-error-bg: #f8d7da;
+  --color-error-text: #721c24;
+  --color-error-border: #f5c6cb;
+
+  --border-radius: 6px;
+  --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --transition-speed: 0.2s;
 }
+
+/* Dark Theme */
+body[data-theme='dark'] {
+  --color-bg: #1a202c;
+  --color-surface: #2d3748;
+  --color-text-primary: #edf2f7;
+  --color-text-secondary: #a0aec0;
+  --color-border: #4a5568;
+
+  --color-primary: #63b3ed; /* Brighter blue for better contrast */
+  --color-primary-hover: #90cdf4;
+  --color-primary-text: #1a202c; /* Dark text on bright buttons */
+
+  --color-danger: #fc8181;
+  --color-danger-hover: #f56565;
+  --color-danger-text: #1a202c;
+
+  --color-success-bg: #2d4f4d;
+  --color-success-text: #9ae6b4;
+  --color-success-border: #38a169;
+
+  --color-error-bg: #5f2b2b;
+  --color-error-text: #feb2b2;
+  --color-error-border: #c53030;
+
+  --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.15);
+}
+
+
+/* 2. Global Styles & Typography
+/* ========================================================================== */
 
 body {
   font-family: var(--font-family);
   margin: 0;
-  padding: 15px;
-  background-color: var(--light-gray-color);
-  color: var(--text-color);
+  padding: 16px;
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
   min-width: 350px;
+  font-size: 16px;
+  line-height: 1.5;
 }
 
-body.sidepanel-body {
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  min-width: 320px;
+h1, h2 {
+  color: var(--color-text-primary);
+  margin: 0 0 16px 0;
 }
 
-body.options-page {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 20px;
+h1 {
+  font-size: 1.5em;
+  text-align: center;
+}
+
+h2 {
+  font-size: 1.1em;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 8px;
+  margin-bottom: 16px;
 }
 
 .container {
@@ -45,105 +98,146 @@ body.options-page {
   max-width: 700px;
 }
 
-h1 {
-  text-align: center;
-  color: var(--text-color);
-  font-size: 1.6em;
-  margin-top: 0;
-  margin-bottom: 20px;
-}
-
-h2 {
-  font-size: 1.2em;
-  color: var(--text-color);
-  border-bottom: 1px solid var(--medium-gray-color);
-  padding-bottom: 8px;
-  margin-top: 20px;
-  margin-bottom: 15px;
-}
-
 .section {
-  margin-bottom: 20px;
-  background-color: #ffffff;
-  padding: 15px;
+  background-color: var(--color-surface);
+  padding: 16px;
   border-radius: var(--border-radius);
   box-shadow: var(--box-shadow);
+  margin-bottom: 20px;
 }
-.section:first-child {
-    margin-top: 0;
+.section:last-child {
+  margin-bottom: 0;
 }
+
+/* 3. Components (Buttons, Inputs, etc.)
+/* ========================================================================== */
 
 button {
   font-family: var(--font-family);
-  padding: 10px 15px;
-  margin: 5px 0;
+  padding: 10px 16px;
   border: none;
-  background-color: var(--primary-color);
-  color: white;
+  background-color: var(--color-primary);
+  color: var(--color-primary-text);
   cursor: pointer;
   border-radius: var(--border-radius);
-  font-size: 0.95em;
-  transition: background-color 0.2s ease-in-out;
+  font-size: 1em;
+  font-weight: 500;
+  transition: background-color var(--transition-speed) ease-in-out, transform var(--transition-speed) ease-in-out;
   text-align: center;
   width: 100%;
 }
 
 button:hover {
-  background-color: var(--primary-hover-color);
+  background-color: var(--color-primary-hover);
+  transform: translateY(-1px);
 }
 
 button:disabled {
-  background-color: var(--medium-gray-color);
+  background-color: var(--color-border);
+  color: var(--color-text-secondary);
   cursor: not-allowed;
+  transform: none;
 }
 
 button.secondary {
-    background-color: var(--dark-gray-color);
-    color: white;
+  background-color: var(--color-surface);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
 }
 button.secondary:hover {
-    background-color: #5a6268;
+  background-color: var(--color-bg);
 }
 
 button.delete-btn {
-  background-color: var(--danger-color);
+  background-color: var(--color-danger);
+  color: var(--color-danger-text);
+  border: none;
 }
 button.delete-btn:hover {
-  background-color: var(--danger-hover-color);
+  background-color: var(--color-danger-hover);
 }
 
 input[type="text"] {
   font-family: var(--font-family);
   padding: 10px;
-  margin-bottom: 10px;
-  border: 1px solid var(--medium-gray-color);
+  border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
   width: 100%;
   box-sizing: border-box;
-  font-size: 0.95em;
+  font-size: 1em;
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  transition: border-color var(--transition-speed) ease-in-out, box-shadow var(--transition-speed) ease-in-out;
 }
 input[type="text"]:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-hover);
   outline: none;
 }
+
 input[type="file"] {
     font-size: 0.9em;
-    padding: 5px;
-    margin: 10px 0; /* Standardized margin */
+    padding: 8px;
     display: block;
     width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    background-color: var(--color-surface);
 }
 
-/* Popup Specifics */
-#capture-layout-section .input-group { /* Class selector */
+.status {
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border-radius: var(--border-radius);
+  font-size: 0.9em;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s ease, max-height 0.3s ease, margin 0.3s ease, padding 0.3s ease;
+  border: 1px solid transparent;
+  max-height: 0;
+  overflow: hidden;
+  margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.status.visible {
+  opacity: 1;
+  max-height: 100px;
+  margin-bottom: 16px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+.status-success {
+  background-color: var(--color-success-bg);
+  color: var(--color-success-text);
+  border-color: var(--color-success-border);
+}
+.status-error {
+  background-color: var(--color-error-bg);
+  color: var(--color-error-text);
+  border-color: var(--color-error-border);
+}
+
+.info-text {
+    font-size: 0.9em;
+    color: var(--color-text-secondary);
+    text-align: left;
+    margin: 10px 0;
+    padding: 10px;
+    line-height: 1.5;
+    border-radius: var(--border-radius);
+    background-color: var(--color-bg);
+}
+
+/* 4. Popup Specifics
+/* ========================================================================== */
+
+.input-group {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 15px; /* Moved from inline style */
-}
-#capture-layout-section input[type="text"] {
-  margin-bottom: 0;
+  margin-top: 16px;
 }
 
 #quick-apply-buttons {
@@ -153,51 +247,52 @@ input[type="file"] {
   gap: 8px;
 }
 
-.quick-apply-btn {
-  /* Styling is primarily from button.secondary */
+
+/* 5. Side Panel Specifics
+/* ========================================================================== */
+
+body.sidepanel-body {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
 }
 
-.info-text {
-    font-size: 0.9em;
-    color: var(--text-secondary-color);
-    text-align: left; /* Changed to left for better readability of multi-line instructions */
-    margin: 10px 0;
-    padding: 5px 10px; /* Added some horizontal padding */
-    line-height: 1.4; /* Improved line height for multi-line text */
-}
-
-/* Side Panel Navigation & Views */
 .sidepanel-nav {
   display: flex;
   justify-content: space-around;
-  background-color: var(--medium-gray-color);
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
   padding: 5px 0;
   flex-shrink: 0;
 }
+
 .nav-button {
-  padding: 8px 10px;
+  padding: 10px;
   border: none;
   background-color: transparent;
-  color: var(--text-color);
+  color: var(--color-text-secondary);
   cursor: pointer;
-  font-size: 0.9em;
+  font-size: 0.95em;
   flex-grow: 1;
   text-align: center;
   border-bottom: 3px solid transparent;
   margin:0;
   border-radius: 0;
+  font-weight: 500;
+  transition: color var(--transition-speed), border-color var(--transition-speed);
 }
 .nav-button.active {
-  background-color: var(--light-gray-color);
-  border-bottom-color: var(--primary-color);
-  font-weight: bold;
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  font-weight: 600;
 }
 .nav-button:hover:not(.active) {
-    background-color: #d3d9df;
+    color: var(--color-text-primary);
 }
 
 .view-container {
-  padding: 10px;
+  padding: 16px;
   flex-grow: 1;
   overflow-y: auto;
 }
@@ -207,6 +302,10 @@ input[type="file"] {
 .view.active {
   display: block;
 }
+#sidepanel-status-message.view-container {
+  padding-bottom: 0;
+  flex-grow: 0;
+}
 
 #sidepanel-presets-list ul {
   list-style-type: none;
@@ -214,8 +313,8 @@ input[type="file"] {
   margin: 0;
 }
 #sidepanel-presets-list li {
-  padding: 10px 5px;
-  border-bottom: 1px solid var(--medium-gray-color);
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -229,7 +328,7 @@ input[type="file"] {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.95em;
+  font-size: 1em;
 }
 #sidepanel-presets-list .button-group {
   display: flex;
@@ -237,75 +336,106 @@ input[type="file"] {
   flex-shrink: 0;
 }
 #sidepanel-presets-list .button-group button {
-  padding: 5px 8px;
-  font-size: 0.8em;
-  margin: 0 0 0 4px; /* Reset default button margin, apply only left */
+  padding: 6px 10px;
+  font-size: 0.85em;
+  margin: 0 0 0 5px;
   width: auto;
 }
 
-.status {
-  padding: 10px 15px;
-  margin-bottom: 15px;
-  border-radius: var(--border-radius);
-  font-size: 0.9em;
-  text-align: center;
-  opacity: 0;
-  transition: opacity 0.3s ease-in-out, max-height 0.3s ease-in-out;
-  border: 1px solid transparent;
-  max-height: 0;
-  overflow: hidden;
-}
-.status.visible {
-    opacity: 1;
-    max-height: 100px;
-}
-.status-success {
-  background-color: #d4edda;
-  color: #155724;
-  border-color: #c3e6cb;
-}
-.status-error {
-  background-color: #f8d7da;
-  color: #721c24;
-  border-color: #f5c6cb;
-}
-
-/* Side Panel Forms */
 #settings-form div {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
 }
 #settings-form input[type="radio"] {
-  margin-right: 8px;
-  accent-color: var(--primary-color);
+  margin-right: 10px;
+  accent-color: var(--color-primary);
+  width: 1.2em;
+  height: 1.2em;
 }
 #settings-form label {
-  font-size: 0.9em;
+  font-size: 1em;
   cursor: pointer;
+  color: var(--color-text-secondary);
 }
+#settings-form input[type="radio"]:checked + label {
+    color: var(--color-text-primary);
+}
+
 
 #save-settings-btn {
   display: block;
-  margin: 15px auto 0 auto;
+  margin: 20px auto 0 auto;
   min-width: 150px;
   width: auto;
 }
 
 #refresh-presets-btn {
-    margin-bottom: 10px;
+    margin-bottom: 16px;
 }
 
-#import-export-view button {
-    /* Default margin is 5px 0, fine for stacked */
-}
-
-/* Vertical button group (used in Quick Apply) */
-.button-group.vertical {
+.import-group {
+    margin-top: 15px;
     display: flex;
     flex-direction: column;
-    gap: 8px; /* Use gap for spacing */
+    gap: 10px;
 }
-.button-group.vertical button {
-    margin: 0; /* Remove individual margins if gap is used */
+
+/* 6. Toggle Switch Component (for Dark Mode)
+/* ========================================================================== */
+
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 28px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-border);
+  transition: .4s;
+  border-radius: 28px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: var(--color-primary);
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px var(--color-primary);
+}
+
+input:checked + .slider:before {
+  transform: translateX(22px);
 }

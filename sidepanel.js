@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const settingsView = document.getElementById('settings-view');
   const saveSettingsBtn = document.getElementById('save-settings-btn');
   const settingsForm = document.getElementById('settings-form');
+  const themeToggle = document.getElementById('theme-toggle');
 
   // Import/Export View Elements
   const importExportView = document.getElementById('import-export-view');
@@ -191,6 +192,21 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshPresetsBtn.addEventListener('click', loadPresets);
   }
 
+  // --- Theme Management ---
+  function applyTheme(theme) {
+    document.body.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+  }
+
+  function handleThemeChange() {
+    const theme = themeToggle.checked ? 'dark' : 'light';
+    applyTheme(theme);
+    chrome.storage.sync.set({ theme: theme }, () => {
+      if (chrome.runtime.lastError) {
+        console.error(`Error saving theme: ${chrome.runtime.lastError.message}`);
+      }
+    });
+  }
+
   // --- Settings View Logic ---
   function saveSettings(event) {
     if(event) event.preventDefault();
@@ -210,27 +226,42 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function loadSettings() {
-    chrome.storage.sync.get({ presetBehavior: 'close_all' }, (items) => {
+    chrome.storage.sync.get({ presetBehavior: 'close_all', theme: 'light' }, (items) => {
       if (chrome.runtime.lastError) {
         displayStatus(`Error loading settings: ${chrome.runtime.lastError.message}`, true, 5000);
+        // Fallback to defaults
         const defaultBehaviorRadio = document.querySelector('#settings-form input[name="preset-behavior"][value="close_all"]');
         if (defaultBehaviorRadio) defaultBehaviorRadio.checked = true;
+        applyTheme('light');
+        if(themeToggle) themeToggle.checked = false;
         return;
       }
+
+      // Load preset behavior setting
       const currentBehavior = items.presetBehavior;
       const behaviorRadio = document.querySelector(`#settings-form input[name="preset-behavior"][value="${currentBehavior}"]`);
       if (behaviorRadio) {
         behaviorRadio.checked = true;
       } else {
-        console.warn(`Stored presetBehavior "${currentBehavior}" is invalid. Defaulting to "close_all".`);
         const defaultBehaviorRadio = document.querySelector('#settings-form input[name="preset-behavior"][value="close_all"]');
         if (defaultBehaviorRadio) defaultBehaviorRadio.checked = true;
+      }
+
+      // Load theme setting
+      const currentTheme = items.theme;
+      applyTheme(currentTheme);
+      if (themeToggle) {
+        themeToggle.checked = currentTheme === 'dark';
       }
     });
   }
 
   if (saveSettingsBtn) {
     saveSettingsBtn.addEventListener('click', saveSettings);
+  }
+
+  if (themeToggle) {
+    themeToggle.addEventListener('change', handleThemeChange);
   }
 
   // --- Import/Export View Logic ---
