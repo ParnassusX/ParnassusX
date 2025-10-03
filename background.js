@@ -289,7 +289,7 @@ async function applyPreset(presetName) {
       console.log(`Adjusted window pos for display ${targetDisplay.id}: L:${targetLeft}, T:${targetTop}, W:${targetWidth}, H:${targetHeight}, S:${targetState}`);
 
       const createData = {
-        url: urlsToOpen.length > 0 ? urlsToOpen[0] : undefined,
+        url: urlsToOpen, // Pass all URLs at once for efficiency
         left: Math.round(targetLeft),
         top: Math.round(targetTop),
         width: Math.round(targetWidth),
@@ -297,26 +297,52 @@ async function applyPreset(presetName) {
         focused: safeGet(windowData, 'focused', false),
         state: targetState,
       };
+
       if (safeGet(windowData, 'appLaunchId')) {
         delete createData.url;
         createData.appLaunchId = safeGet(windowData, 'appLaunchId');
       }
 
+      // If there are no URLs to open (e.g. for an app window), we shouldn't pass an empty array.
+      if (Array.isArray(createData.url) && createData.url.length === 0) {
+          delete createData.url;
+      }
+
       const newWindow = await chrome.windows.create(createData);
 
       if (newWindow && newWindow.id) {
-        for (let i = (createData.url ? 1 : 0); i < urlsToOpen.length; i++) {
-          try {
-            await chrome.tabs.create({
-              windowId: newWindow.id,
-              url: urlsToOpen[i],
-              active: safeGet(windowData.tabs[i], 'active', false),
-              pinned: safeGet(windowData.tabs[i], 'pinned', false)
-            });
-          } catch (tabError) {
-            console.error(`Error creating tab for URL ${urlsToOpen[i]} in window ${newWindow.id}:`, tabError.message, tabError.stack);
+        // Now, restore pinned and active states
+        const savedTabs = safeGet(windowData, 'tabs', []);
+        let activeTabId = null;
+
+        for (let i = 0; i < savedTabs.length; i++) {
+          const savedTab = savedTabs[i];
+          // newWindow.tabs contains the tabs that were just created
+          const newTab = newWindow.tabs.find(t => t.url === savedTab.url && t.index === i);
+
+          if (newTab) {
+            if (savedTab.pinned) {
+              try {
+                await chrome.tabs.update(newTab.id, { pinned: true });
+              } catch (pinError) {
+                console.warn(`Error pinning tab ${newTab.id}:`, pinError.message);
+              }
+            }
+            if (savedTab.active) {
+              activeTabId = newTab.id; // Mark this as the one to make active
+            }
           }
         }
+
+        // Activate the correct tab last, after all pinning is done.
+        if (activeTabId) {
+          try {
+            await chrome.tabs.update(activeTabId, { active: true });
+          } catch (activateError) {
+            console.warn(`Error activating tab ${activeTabId}:`, activateError.message);
+          }
+        }
+
         if ((windowData.state === "maximized" || windowData.state === "fullscreen") && targetDisplay.id === originalDisplayId) {
            try { await chrome.windows.update(newWindow.id, { state: windowData.state }); }
            catch (updateError) { console.warn(`Error updating window state for ${newWindow.id}:`, updateError.message); }
