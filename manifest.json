@@ -13,7 +13,8 @@
     "storage",
     "system.display",
     "sidePanel",
-    "userScripts"
+    "userScripts",
+    "prompt"
   ],
   "background": {
     "service_worker": "background.js"

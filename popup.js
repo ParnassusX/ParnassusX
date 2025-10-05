@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const actionTabSelect = document.getElementById('action-tab-select');
   const actionScriptInput = document.getElementById('action-script-input');
   const clearActionBtn = document.getElementById('clear-action-btn');
+  const suggestNameBtn = document.getElementById('suggest-name-btn');
 
   let capturedLayout = null;
   let statusTimeout = null;
@@ -226,6 +227,45 @@ document.addEventListener('DOMContentLoaded', () => {
           actionScriptInput.value = '';
           displayStatus('Action cleared.', false, 2000);
       });
+  }
+
+  // --- AI Name Suggestion Logic ---
+  if (suggestNameBtn) {
+    suggestNameBtn.addEventListener('click', async () => {
+      if (!capturedLayout || !capturedLayout.windows || capturedLayout.windows.length === 0) {
+        displayStatus('Please capture a layout first to suggest a name.', true);
+        return;
+      }
+
+      displayStatus('Asking AI for a name suggestion...', false, 4000);
+
+      const allTabs = capturedLayout.windows.flatMap(win => win.tabs || []);
+      const tabTitles = allTabs.map(tab => tab.title).filter(title => title);
+
+      if (tabTitles.length === 0) {
+        displayStatus('No tabs with titles found to base a suggestion on.', true);
+        return;
+      }
+
+      try {
+        const promptText = `Based on the following list of browser tab titles, suggest a short, descriptive name (3-4 words max) for this collection of tabs. The name should represent the overall theme or task. For example, if the tabs are "Google Docs", "Project Tracker", and "Company Chat", a good name would be "Work Project".\n\nTab Titles:\n- ${tabTitles.join('\n- ')}\n\nSuggested Name:`;
+
+        const result = await chrome.prompt.create({
+          prompt: promptText
+        });
+
+        if (result && result.text) {
+          const suggestedName = result.text.trim().replace(/^"|"$/g, '');
+          presetNameInput.value = suggestedName;
+          displayStatus('Suggestion received!', false, 2000);
+        } else {
+          displayStatus('AI could not provide a suggestion.', true);
+        }
+      } catch (error) {
+        console.error('Error calling the Prompt API:', error);
+        displayStatus(`AI suggestion failed: ${error.message}`, true);
+      }
+    });
   }
 
 
