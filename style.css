@@ -381,6 +381,65 @@ body.sidepanel-body {
     gap: 10px;
 }
 
+/* 7. Advanced Action Panel
+/* ========================================================================== */
+
+.advanced-action-container {
+  margin-top: 16px;
+  border-top: 1px solid var(--color-border);
+  padding-top: 16px;
+}
+
+#action-details-panel {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#action-details-panel.hidden {
+  display: none;
+}
+
+#action-details-panel label {
+  font-size: 0.9em;
+  color: var(--color-text-secondary);
+}
+
+#action-details-panel select,
+#action-details-panel textarea {
+  font-family: var(--font-family);
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  font-size: 0.95em;
+}
+
+#action-details-panel textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+button.small {
+  padding: 6px 12px;
+  font-size: 0.85em;
+  font-weight: 400;
+}
+
+button.danger {
+    background-color: var(--color-danger);
+    color: var(--color-danger-text);
+    border-color: var(--color-danger);
+}
+
+button.danger:hover {
+    background-color: var(--color-danger-hover);
+}
+
 /* 6. Toggle Switch Component (for Dark Mode)
 /* ========================================================================== */
 
@@ -402,6 +461,19 @@ body.sidepanel-body {
   opacity: 0;
   width: 0;
   height: 0;
+}
+
+.preset-name-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-grow: 1;
+  overflow: hidden; /* Important for the container */
+}
+
+.action-indicator {
+  font-size: 1.1em;
+  cursor: default;
 }
 
 .slider {

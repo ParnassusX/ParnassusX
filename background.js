@@ -55,6 +55,7 @@ async function captureCurrentWindowLayout() {
         tabs: (win.tabs || []).filter(tab => typeof tab.url === 'string' && tab.url.length > 0 && !tab.url.startsWith("chrome-extension://"))
                        .map(tab => ({
                          url: tab.url,
+                         title: tab.title || '', // Capture the title
                          active: tab.active || false,
                          pinned: tab.pinned || false
                        })),
@@ -340,6 +341,27 @@ async function applyPreset(presetName) {
             await chrome.tabs.update(activeTabId, { active: true });
           } catch (activateError) {
             console.warn(`Error activating tab ${activeTabId}:`, activateError.message);
+          }
+        }
+
+        // --- Execute Action Script if it exists ---
+        if (presetLayout.action && presetLayout.action.script && presetLayout.action.targetUrl) {
+          const targetTab = newWindow.tabs.find(t => t.url === presetLayout.action.targetUrl);
+          if (targetTab) {
+            console.log(`Executing action on tab ${targetTab.id} for URL ${presetLayout.action.targetUrl}`);
+            try {
+              await chrome.userScripts.execute({
+                target: { tabId: targetTab.id },
+                func: (script) => {
+                  // Using a function constructor is a safer way to execute a string of JS
+                  new Function(script)();
+                },
+                args: [presetLayout.action.script],
+                world: 'MAIN', // Execute in the page's main world to interact with page scripts
+              });
+            } catch (execError) {
+              console.error(`Error executing action script on tab ${targetTab.id}:`, execError);
+            }
           }
         }
 

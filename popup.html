@@ -15,6 +15,17 @@
       <input type="text" id="preset-name-input" placeholder="Enter new preset name..." />
       <button id="save-layout-btn">Save New Preset</button>
     </div>
+
+    <div class="advanced-action-container">
+      <button id="add-action-btn" class="secondary small">Add Action (Advanced)</button>
+      <div id="action-details-panel" class="hidden">
+        <label for="action-tab-select">Select a tab to run script on:</label>
+        <select id="action-tab-select"></select>
+        <label for="action-script-input">JavaScript to execute:</label>
+        <textarea id="action-script-input" rows="4" placeholder="Example: alert('Page Loaded!');"></textarea>
+        <button id="clear-action-btn" class="secondary small danger">Clear Action</button>
+      </div>
+    </div>
   </div>
 
   <div class="section">

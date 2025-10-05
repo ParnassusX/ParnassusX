@@ -90,12 +90,26 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Presets View Logic ---
-  function createPresetListItem(presetName) {
+  function createPresetListItem(presetName, presetData) {
     const li = document.createElement('li');
+
+    const nameContainer = document.createElement('div');
+    nameContainer.className = 'preset-name-container';
+
     const nameSpan = document.createElement('span');
     nameSpan.className = 'preset-name';
     nameSpan.textContent = presetName;
-    li.appendChild(nameSpan);
+    nameContainer.appendChild(nameSpan);
+
+    if (presetData.action && presetData.action.script) {
+        const actionIndicator = document.createElement('span');
+        actionIndicator.className = 'action-indicator';
+        actionIndicator.textContent = '⚡️';
+        actionIndicator.title = 'This preset includes an automated action.';
+        nameContainer.appendChild(actionIndicator);
+    }
+
+    li.appendChild(nameContainer);
 
     const buttonGroupDiv = document.createElement('div');
     buttonGroupDiv.className = 'button-group';
@@ -177,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const ul = document.createElement('ul');
           const sortedPresetNames = Object.keys(presets).sort();
           sortedPresetNames.forEach(presetName => {
-            ul.appendChild(createPresetListItem(presetName));
+            ul.appendChild(createPresetListItem(presetName, presets[presetName]));
           });
           presetsListDiv.appendChild(ul);
         } else {

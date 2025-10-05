@@ -5,6 +5,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusMessageDiv = document.getElementById('status-message');
   const quickApplyContainer = document.getElementById('quick-apply-buttons');
 
+  const addActionBtn = document.getElementById('add-action-btn');
+  const actionDetailsPanel = document.getElementById('action-details-panel');
+  const actionTabSelect = document.getElementById('action-tab-select');
+  const actionScriptInput = document.getElementById('action-script-input');
+  const clearActionBtn = document.getElementById('clear-action-btn');
+
   let capturedLayout = null;
   let statusTimeout = null;
 
@@ -117,14 +123,42 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function populateActionTabSelector() {
+    if (!actionTabSelect || !capturedLayout || !capturedLayout.windows) {
+      return;
+    }
+    actionTabSelect.innerHTML = '<option value="">-- Select a tab --</option>';
+    capturedLayout.windows.forEach(win => {
+      if(win.tabs && win.tabs.length > 0) {
+        win.tabs.forEach(tab => {
+          const option = document.createElement('option');
+          option.value = tab.url;
+          // Truncate title for display
+          const title = tab.title || tab.url;
+          option.textContent = title.length > 50 ? title.substring(0, 47) + '...' : title;
+          actionTabSelect.appendChild(option);
+        });
+      }
+    });
+  }
+
+  function resetActionPanel() {
+      if (actionDetailsPanel) actionDetailsPanel.classList.add('hidden');
+      if (actionTabSelect) actionTabSelect.innerHTML = '';
+      if (actionScriptInput) actionScriptInput.value = '';
+      if (addActionBtn) addActionBtn.textContent = 'Add Action (Advanced)';
+  }
+
   if (captureLayoutBtn) {
     captureLayoutBtn.addEventListener('click', () => {
       displayStatus('Capturing layout...', false, 2000);
+      resetActionPanel(); // Reset on new capture
       chrome.runtime.sendMessage({ action: "captureLayout" }, (response) => {
         handleResponse(response, (r) => {
           capturedLayout = r.layout;
           displayStatus(r.message || 'Layout captured! Enter name and save.', false);
           console.log("Captured layout in popup:", capturedLayout);
+          populateActionTabSelector(); // Populate dropdown after capture
         }, "Error capturing layout");
         if (!(response && (response.status === "success" || response.success) && response.layout)) {
             capturedLayout = null;
@@ -147,15 +181,25 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      const layoutDataToSave = capturedLayout;
+      const layoutDataToSave = { ...capturedLayout }; // Create a copy to modify
+
+      // Check if an action is defined and add it to the layout data
+      const script = actionScriptInput.value.trim();
+      const targetUrl = actionTabSelect.value;
+      if (script && targetUrl) {
+          layoutDataToSave.action = {
+              targetUrl: targetUrl,
+              script: script
+          };
+          console.log("Adding action to preset:", layoutDataToSave.action);
+      }
 
       chrome.runtime.sendMessage({ action: "savePreset", presetName: presetName, layoutData: layoutDataToSave }, (response) => {
         handleResponse(response, (r) => {
-          // Use the message from background.js as it's specific (saved or updated)
           displayStatus(r.message || `Preset "${presetName}" processed successfully!`, false);
           if(presetNameInput) presetNameInput.value = '';
           capturedLayout = null;
-          // Refresh Quick Apply buttons after successful save, ensuring user sees confirmation first
+          resetActionPanel();
           loadQuickApplyButtons();
         }, `Error saving preset "${presetName}"`);
       });
@@ -163,6 +207,27 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
       console.error("Element with ID 'save-layout-btn' not found.");
   }
+
+  // --- Action Panel Logic ---
+  if (addActionBtn) {
+      addActionBtn.addEventListener('click', () => {
+          if (!capturedLayout) {
+              displayStatus('Please capture a layout first before adding an action.', true);
+              return;
+          }
+          const isHidden = actionDetailsPanel.classList.toggle('hidden');
+          addActionBtn.textContent = isHidden ? 'Add Action (Advanced)' : 'Hide Action';
+      });
+  }
+
+  if (clearActionBtn) {
+      clearActionBtn.addEventListener('click', () => {
+          actionTabSelect.value = '';
+          actionScriptInput.value = '';
+          displayStatus('Action cleared.', false, 2000);
+      });
+  }
+
 
   if(!statusMessageDiv) console.error("Element with ID 'status-message' not found.");
   if(!presetNameInput) console.error("Element with ID 'preset-name-input' not found.");
