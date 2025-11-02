@@ -203,8 +203,17 @@ input[type="text"]:focus, select:focus {
 }
 
 #sidepanel-presets-list li .button-group button {
-    padding: 6px 12px;
+    padding: 6px;
     font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#sidepanel-presets-list li .button-group button svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2.5;
 }
 
 .workspace-manager {

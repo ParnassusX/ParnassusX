@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const captureLayoutBtn = document.getElementById('capture-layout-btn');
   const saveLayoutBtn = document.getElementById('save-layout-btn');
+  const suggestNameBtn = document.getElementById('suggest-name-btn');
   const presetNameInput = document.getElementById('preset-name-input');
   const statusMessageDiv = document.getElementById('status-message');
   const quickApplyContainer = document.getElementById('quick-apply-buttons');
@@ -165,6 +166,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   } else {
       console.error("Element with ID 'capture-layout-btn' not found.");
+  }
+
+  if (suggestNameBtn) {
+    suggestNameBtn.addEventListener('click', async () => {
+      if (!capturedLayout) {
+        displayStatus('Please capture a layout first.', true);
+        return;
+      }
+      const tabTitles = capturedLayout.windows.flatMap(w => w.tabs.map(t => t.title));
+      const prompt = `Based on these tab titles, suggest a short, descriptive name for this window layout: ${tabTitles.join(', ')}`;
+      const suggestedName = await chrome.prompt(prompt);
+      if (suggestedName) {
+        presetNameInput.value = suggestedName;
+      }
+    });
   }
 
   if (saveLayoutBtn) {

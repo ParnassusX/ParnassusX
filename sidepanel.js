@@ -28,6 +28,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const importFileInput = document.getElementById('import-file-input');
   const importPresetsBtn = document.getElementById('import-presets-btn');
 
+  // --- Icon Definitions ---
+  const ICONS = {
+    apply: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10"/></svg>`,
+    update: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><line x1="12" y1="11" x2="12" y2="17" /><polyline points="9 14 12 11 15 14" /></svg>`,
+    delete: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>`,
+  };
+
   // --- Navigation Logic ---
   navButtons.forEach(button => {
     button.addEventListener('click', () => {
@@ -169,12 +176,12 @@ document.addEventListener('DOMContentLoaded', () => {
     buttonGroupDiv.className = 'button-group';
 
     const updateBtn = document.createElement('button');
-    updateBtn.textContent = 'Update';
+    updateBtn.innerHTML = ICONS.update;
     updateBtn.classList.add('update-btn');
     updateBtn.setAttribute('data-preset-name', presetName);
-    updateBtn.title = `Capture current layout and update preset: ${presetName}`; // Tooltip
+    updateBtn.title = `Update preset: ${presetName}`;
     updateBtn.addEventListener('click', (event) => {
-      const nameToUpdate = event.target.getAttribute('data-preset-name');
+      const nameToUpdate = event.target.closest('button').getAttribute('data-preset-name');
       displayStatus(`Updating "${nameToUpdate}"... Capturing current layout.`, false, 4000);
       chrome.runtime.sendMessage({ action: "captureLayout" }, (captureResponse) => {
         handleResponse(captureResponse, (capRes) => {
@@ -182,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const newLayoutData = capRes.layout;
             displayStatus(`Layout captured. Updating preset "${nameToUpdate}"...`, false, 4000);
             chrome.runtime.sendMessage({ action: "updatePreset", presetName: nameToUpdate, layoutData: newLayoutData, workspace: workspaceSelect.value }, (updateMsgResponse) => {
-              handleResponse(updateMsgResponse, (updResp) => { // Pass full response to callback
+              handleResponse(updateMsgResponse, (updResp) => {
                 displayStatus(updResp.message || `Preset "${nameToUpdate}" updated successfully.`, false);
               }, `Error updating "${nameToUpdate}"`);
             });
@@ -195,11 +202,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const applyBtn = document.createElement('button');
-    applyBtn.textContent = 'Apply';
+    applyBtn.innerHTML = ICONS.apply;
     applyBtn.setAttribute('data-preset-name', presetName);
     applyBtn.title = `Apply preset: ${presetName}`;
     applyBtn.addEventListener('click', (event) => {
-      const name = event.target.getAttribute('data-preset-name');
+      const name = event.target.closest('button').getAttribute('data-preset-name');
       displayStatus(`Applying preset "${name}"...`, false, 2000);
       chrome.runtime.sendMessage({ action: "applyPreset", presetName: name, workspace: workspaceSelect.value }, (applyResponse) => {
         handleResponse(applyResponse, (appResp) => {
@@ -209,12 +216,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const deleteBtn = document.createElement('button');
-    deleteBtn.textContent = 'Delete';
+    deleteBtn.innerHTML = ICONS.delete;
     deleteBtn.classList.add('delete-btn');
     deleteBtn.setAttribute('data-preset-name', presetName);
     deleteBtn.title = `Delete preset: ${presetName}`;
     deleteBtn.addEventListener('click', (event) => {
-      const name = event.target.getAttribute('data-preset-name');
+      const name = event.target.closest('button').getAttribute('data-preset-name');
       if (!confirm(`Are you sure you want to delete preset "${name}"? This action cannot be undone.`)) return;
       chrome.runtime.sendMessage({ action: "deletePreset", presetName: name, workspace: workspaceSelect.value }, (deleteResponse) => {
         handleResponse(deleteResponse, (delResp) => {

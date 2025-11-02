@@ -12,7 +12,8 @@
     "tabs",
     "storage",
     "system.display",
-    "sidePanel"
+    "sidePanel",
+    "prompt"
   ],
   "background": {
     "service_worker": "background.js"
