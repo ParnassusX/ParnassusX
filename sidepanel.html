@@ -3,78 +3,6 @@
 <head>
   <title>Window Presets Manager</title>
   <link rel="stylesheet" type="text/css" href="style.css">
-  <style>
-    body {
-      padding: 0; /* Remove body padding, container will handle it */
-      margin: 0;
-      min-width: 320px; /* Slightly wider for nav */
-      background-color: var(--light-gray-color);
-      display: flex;
-      flex-direction: column;
-      height: 100vh; /* Full viewport height */
-    }
-    .sidepanel-nav {
-      display: flex;
-      justify-content: space-around;
-      background-color: var(--medium-gray-color);
-      padding: 5px 0;
-      flex-shrink: 0; /* Prevent nav from shrinking */
-    }
-    .nav-button {
-      padding: 8px 10px;
-      border: none;
-      background-color: transparent;
-      color: var(--text-color);
-      cursor: pointer;
-      font-size: 0.9em;
-      flex-grow: 1;
-      text-align: center;
-      border-bottom: 3px solid transparent;
-    }
-    .nav-button.active {
-      background-color: var(--light-gray-color);
-      border-bottom: 3px solid var(--primary-color);
-      font-weight: bold;
-    }
-    .nav-button:hover:not(.active) {
-        background-color: #d3d9df;
-    }
-
-    .view-container {
-      padding: 10px; /* Padding for the content of each view */
-      flex-grow: 1; /* Allows content to take available space */
-      overflow-y: auto; /* Add scroll for long content */
-    }
-    .view {
-      display: none; /* Hidden by default */
-    }
-    .view.active {
-      display: block; /* Show active view */
-    }
-
-    /* Ensure sections within views don't have excessive top margin if nav is present */
-    .view .section:first-child {
-        /* margin-top: 0; */ /* This might be too aggressive, manage spacing within view */
-    }
-    #sidepanel-presets-list {
-        /* flex-grow: 1; */ /* Not needed directly here if view-container handles growth */
-        overflow-y: auto;
-        min-height: 100px;
-    }
-    /* Adjust button widths within sidepanel sections if needed */
-    .section button {
-        /* width: auto; */ /* Allow buttons to size naturally unless full-width is desired */
-    }
-    #refresh-presets-btn {
-        width: 100%;
-        margin-bottom: 10px;
-    }
-    #save-settings-btn { /* Renamed from save-options-btn for clarity */
-        display: block;
-        margin: 20px auto 0 auto;
-        min-width: 150px;
-    }
-  </style>
 </head>
 <body>
   <div class="sidepanel-nav">
@@ -83,13 +11,15 @@
     <button class="nav-button" data-view="import-export-view">Import/Export</button>
   </div>
 
-  <!-- Status message area - consider a single one or per-view -->
   <div id="sidepanel-status-message" class="status view-container" style="padding-bottom: 0; flex-grow:0; max-height: 50px;"></div>
 
-
   <div id="presets-view" class="view active view-container">
-    <!-- <h1>Presets</h1> --> <!-- Title can be part of the nav or header -->
-    <div class="section" style="margin-top:0;"> <!-- Presets content section -->
+    <div class="section" style="margin-top:0;">
+      <div class="workspace-manager">
+        <select id="workspace-select"></select>
+        <button id="create-workspace-btn">+</button>
+        <button id="delete-workspace-btn">-</button>
+      </div>
       <button id="refresh-presets-btn" class="secondary">Refresh List</button>
       <div id="sidepanel-presets-list">
         <!-- Presets will be listed here by sidepanel.js -->
@@ -98,10 +28,9 @@
   </div>
 
   <div id="settings-view" class="view view-container">
-    <!-- Content moved from options.html -->
     <div class="section" style="margin-top:0;">
       <h2>Preset Application Behavior</h2>
-      <form id="settings-form"> <!-- Changed ID for clarity -->
+      <form id="settings-form">
         <div>
           <input type="radio" id="behavior-close-all" name="preset-behavior" value="close_all">
           <label for="behavior-close-all">Close all other windows before applying preset</label>
@@ -116,13 +45,25 @@
         </div>
       </form>
     </div>
+    <div class="section">
+      <h2>Appearance</h2>
+      <label class="toggle-switch">
+        <input type="checkbox" id="theme-toggle">
+        <span class="slider"></span>
+        Dark Mode
+      </label>
+    </div>
+    <div class="section">
+      <h2>Cloud Sync</h2>
+      <label>
+        <input type="checkbox" id="cloud-sync-toggle">
+        Sync presets and workspaces across devices
+      </label>
+    </div>
     <button id="save-settings-btn">Save Settings</button>
-    <!-- Specific status for settings if needed, or use the global one -->
-    <!-- <div id="sidepanel-settings-status" class="status"></div> -->
   </div>
 
   <div id="import-export-view" class="view view-container">
-    <!-- Content moved from options.html -->
     <div class="section" style="margin-top:0;">
       <h2>Import/Export Presets</h2>
       <button id="export-presets-btn">Export All Presets</button>
@@ -131,8 +72,6 @@
         <button id="import-presets-btn">Import Presets from File</button>
       </div>
     </div>
-     <!-- Specific status for import/export if needed, or use the global one -->
-    <!-- <div id="sidepanel-import-export-status" class="status"></div> -->
   </div>
 
   <script src="sidepanel.js"></script>

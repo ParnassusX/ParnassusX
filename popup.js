@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const presetNameInput = document.getElementById('preset-name-input');
   const statusMessageDiv = document.getElementById('status-message');
   const quickApplyContainer = document.getElementById('quick-apply-buttons');
+  const workspaceSelect = document.getElementById('workspace-select');
 
   let capturedLayout = null;
   let statusTimeout = null;
@@ -51,6 +52,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  async function getStorageArea() {
+    const data = await chrome.storage.sync.get({ cloudSync: false });
+    return data.cloudSync ? chrome.storage.sync : chrome.storage.local;
+  }
+
+  async function loadWorkspaces() {
+    const storage = await getStorageArea();
+    const data = await storage.get(['workspaces', 'activeWorkspace']);
+    const workspaces = data.workspaces || { 'default': {} };
+    const activeWorkspace = data.activeWorkspace || 'default';
+
+    workspaceSelect.innerHTML = '';
+    for (const name in workspaces) {
+      const option = document.createElement('option');
+      option.value = name;
+      option.textContent = name;
+      if (name === activeWorkspace) {
+        option.selected = true;
+      }
+      workspaceSelect.appendChild(option);
+    }
+    loadQuickApplyButtons();
+  }
+
+  workspaceSelect.addEventListener('change', async () => {
+    const storage = await getStorageArea();
+    const activeWorkspace = workspaceSelect.value;
+    await storage.set({ activeWorkspace });
+    loadQuickApplyButtons();
+  });
+
   async function loadQuickApplyButtons() {
     if (!quickApplyContainer) {
         console.error("Quick apply container not found.");
@@ -58,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     quickApplyContainer.innerHTML = '';
 
-    chrome.runtime.sendMessage({ action: "getPresets" }, function(response) {
+    chrome.runtime.sendMessage({ action: "getPresets", workspace: workspaceSelect.value }, function(response) {
       if (chrome.runtime.lastError) {
         handleResponse({ status: 'error', message: chrome.runtime.lastError.message },
                        (r) => displayStatus(r.message, true),
@@ -97,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
             button.addEventListener('click', function() {
               const nameToApply = this.dataset.presetName;
               displayStatus(`Applying preset "${nameToApply}"...`, false, 2000);
-              chrome.runtime.sendMessage({ action: "applyPreset", presetName: nameToApply }, function(applyResponse) {
+              chrome.runtime.sendMessage({ action: "applyPreset", presetName: nameToApply, workspace: workspaceSelect.value }, function(applyResponse) {
                 handleResponse(applyResponse,
                                (resp) => {
                                  displayStatus(resp.message || `Preset "${nameToApply}" applied.`, false);
@@ -149,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const layoutDataToSave = capturedLayout;
 
-      chrome.runtime.sendMessage({ action: "savePreset", presetName: presetName, layoutData: layoutDataToSave }, (response) => {
+      chrome.runtime.sendMessage({ action: "savePreset", presetName: presetName, layoutData: layoutDataToSave, workspace: workspaceSelect.value }, (response) => {
         handleResponse(response, (r) => {
           // Use the message from background.js as it's specific (saved or updated)
           displayStatus(r.message || `Preset "${presetName}" processed successfully!`, false);
@@ -167,5 +199,5 @@ document.addEventListener('DOMContentLoaded', () => {
   if(!statusMessageDiv) console.error("Element with ID 'status-message' not found.");
   if(!presetNameInput) console.error("Element with ID 'preset-name-input' not found.");
 
-  loadQuickApplyButtons();
+  loadWorkspaces();
 });

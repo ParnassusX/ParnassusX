@@ -10,6 +10,9 @@
   <div id="status-message" class="status"></div>
 
   <div class="section" id="capture-layout-section">
+    <div class="workspace-manager">
+      <select id="workspace-select"></select>
+    </div>
     <button id="capture-layout-btn" class="secondary">Capture Current Window Layout</button>
     <div class="input-group" style="margin-top: 15px;">
       <input type="text" id="preset-name-input" placeholder="Enter new preset name..." />
@@ -23,13 +26,6 @@
       <!-- Quick apply buttons will be added here by JavaScript -->
     </div>
   </div>
-
-  <!--
-    Instructions or link to side panel can be added here if desired, for example:
-    <p style="text-align: center; margin-top: 15px; font-size: 0.9em;">
-      Manage your saved presets in the <a href="#" id="open-side-panel-link">Side Panel</a>.
-    </p>
-  -->
 
   <script src="popup.js"></script>
 </body>

@@ -11,11 +11,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const presetsView = document.getElementById('presets-view');
   const presetsListDiv = document.getElementById('sidepanel-presets-list');
   const refreshPresetsBtn = document.getElementById('refresh-presets-btn');
+  const workspaceSelect = document.getElementById('workspace-select');
+  const createWorkspaceBtn = document.getElementById('create-workspace-btn');
+  const deleteWorkspaceBtn = document.getElementById('delete-workspace-btn');
 
   // Settings View Elements
   const settingsView = document.getElementById('settings-view');
   const saveSettingsBtn = document.getElementById('save-settings-btn');
   const settingsForm = document.getElementById('settings-form');
+  const cloudSyncToggle = document.getElementById('cloud-sync-toggle');
+  const themeToggle = document.getElementById('theme-toggle');
 
   // Import/Export View Elements
   const importExportView = document.getElementById('import-export-view');
@@ -88,6 +93,70 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // --- Workspace Logic ---
+  async function getStorageArea() {
+    const data = await chrome.storage.sync.get({ cloudSync: false });
+    return data.cloudSync ? chrome.storage.sync : chrome.storage.local;
+  }
+
+  async function loadWorkspaces() {
+    const storage = await getStorageArea();
+    const data = await storage.get(['workspaces', 'activeWorkspace']);
+    const workspaces = data.workspaces || { 'default': {} };
+    const activeWorkspace = data.activeWorkspace || 'default';
+
+    workspaceSelect.innerHTML = '';
+    for (const name in workspaces) {
+      const option = document.createElement('option');
+      option.value = name;
+      option.textContent = name;
+      if (name === activeWorkspace) {
+        option.selected = true;
+      }
+      workspaceSelect.appendChild(option);
+    }
+    loadPresets();
+  }
+
+  workspaceSelect.addEventListener('change', async () => {
+    const storage = await getStorageArea();
+    const activeWorkspace = workspaceSelect.value;
+    await storage.set({ activeWorkspace });
+    loadPresets();
+  });
+
+  createWorkspaceBtn.addEventListener('click', async () => {
+    const workspaceName = prompt('Enter new workspace name:');
+    if (workspaceName) {
+      const storage = await getStorageArea();
+      const data = await storage.get('workspaces');
+      const workspaces = data.workspaces || { 'default': {} };
+      if (workspaces[workspaceName]) {
+        displayStatus(`Workspace "${workspaceName}" already exists.`, true);
+        return;
+      }
+      workspaces[workspaceName] = {};
+      await storage.set({ workspaces, activeWorkspace: workspaceName });
+      loadWorkspaces();
+    }
+  });
+
+  deleteWorkspaceBtn.addEventListener('click', async () => {
+    const workspaceName = workspaceSelect.value;
+    if (workspaceName === 'default') {
+      displayStatus('Cannot delete the default workspace.', true);
+      return;
+    }
+    if (confirm(`Are you sure you want to delete workspace "${workspaceName}"? This action cannot be undone.`)) {
+      const storage = await getStorageArea();
+      const data = await storage.get('workspaces');
+      const workspaces = data.workspaces || { 'default': {} };
+      delete workspaces[workspaceName];
+      await storage.set({ workspaces, activeWorkspace: 'default' });
+      loadWorkspaces();
+    }
+  });
+
   // --- Presets View Logic ---
   function createPresetListItem(presetName) {
     const li = document.createElement('li');
@@ -112,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (capRes.layout && !capRes.layout.error && Object.keys(capRes.layout).length > 0) {
             const newLayoutData = capRes.layout;
             displayStatus(`Layout captured. Updating preset "${nameToUpdate}"...`, false, 4000);
-            chrome.runtime.sendMessage({ action: "updatePreset", presetName: nameToUpdate, layoutData: newLayoutData }, (updateMsgResponse) => {
+            chrome.runtime.sendMessage({ action: "updatePreset", presetName: nameToUpdate, layoutData: newLayoutData, workspace: workspaceSelect.value }, (updateMsgResponse) => {
               handleResponse(updateMsgResponse, (updResp) => { // Pass full response to callback
                 displayStatus(updResp.message || `Preset "${nameToUpdate}" updated successfully.`, false);
               }, `Error updating "${nameToUpdate}"`);
@@ -132,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
     applyBtn.addEventListener('click', (event) => {
       const name = event.target.getAttribute('data-preset-name');
       displayStatus(`Applying preset "${name}"...`, false, 2000);
-      chrome.runtime.sendMessage({ action: "applyPreset", presetName: name }, (applyResponse) => {
+      chrome.runtime.sendMessage({ action: "applyPreset", presetName: name, workspace: workspaceSelect.value }, (applyResponse) => {
         handleResponse(applyResponse, (appResp) => {
           displayStatus(appResp.message || `Preset "${name}" applied successfully.`, false, 3000);
         }, `Error applying "${name}"`);
@@ -147,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
     deleteBtn.addEventListener('click', (event) => {
       const name = event.target.getAttribute('data-preset-name');
       if (!confirm(`Are you sure you want to delete preset "${name}"? This action cannot be undone.`)) return;
-      chrome.runtime.sendMessage({ action: "deletePreset", presetName: name }, (deleteResponse) => {
+      chrome.runtime.sendMessage({ action: "deletePreset", presetName: name, workspace: workspaceSelect.value }, (deleteResponse) => {
         handleResponse(deleteResponse, (delResp) => {
           displayStatus(delResp.message || `Preset "${name}" deleted successfully.`, false);
           loadPresets();
@@ -162,13 +231,14 @@ document.addEventListener('DOMContentLoaded', () => {
     return li;
   }
 
-  function loadPresets() {
+  async function loadPresets() {
     if (!presetsListDiv) {
         console.error("Preset list DIV not found.");
         displayStatus("Error: UI element for presets missing.", true);
         return;
     }
-    chrome.runtime.sendMessage({ action: "getPresets" }, (response) => {
+    const storage = await getStorageArea();
+    chrome.runtime.sendMessage({ action: "getPresets", workspace: workspaceSelect.value }, (response) => {
       handleResponse(response, (r) => {
         presetsListDiv.innerHTML = '';
         const presets = r.presets;
@@ -192,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Settings View Logic ---
-  function saveSettings(event) {
+  async function saveSettings(event) {
     if(event) event.preventDefault();
     const presetBehaviorInput = document.querySelector('#settings-form input[name="preset-behavior"]:checked');
     if (!presetBehaviorInput) {
@@ -200,43 +270,39 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     const presetBehavior = presetBehaviorInput.value;
-    chrome.storage.sync.set({ presetBehavior: presetBehavior }, () => {
-      if (chrome.runtime.lastError) {
-        displayStatus(`Error saving settings: ${chrome.runtime.lastError.message}`, true, 5000);
-      } else {
-        displayStatus('Settings saved successfully.', false, 3000);
-      }
-    });
+    const cloudSync = cloudSyncToggle.checked;
+    const theme = themeToggle.checked ? 'dark' : 'light';
+    await chrome.storage.sync.set({ presetBehavior, cloudSync, theme });
+    displayStatus('Settings saved successfully.', false, 3000);
   }
 
-  function loadSettings() {
-    chrome.storage.sync.get({ presetBehavior: 'close_all' }, (items) => {
-      if (chrome.runtime.lastError) {
-        displayStatus(`Error loading settings: ${chrome.runtime.lastError.message}`, true, 5000);
-        const defaultBehaviorRadio = document.querySelector('#settings-form input[name="preset-behavior"][value="close_all"]');
-        if (defaultBehaviorRadio) defaultBehaviorRadio.checked = true;
-        return;
-      }
-      const currentBehavior = items.presetBehavior;
-      const behaviorRadio = document.querySelector(`#settings-form input[name="preset-behavior"][value="${currentBehavior}"]`);
-      if (behaviorRadio) {
-        behaviorRadio.checked = true;
-      } else {
-        console.warn(`Stored presetBehavior "${currentBehavior}" is invalid. Defaulting to "close_all".`);
-        const defaultBehaviorRadio = document.querySelector('#settings-form input[name="preset-behavior"][value="close_all"]');
-        if (defaultBehaviorRadio) defaultBehaviorRadio.checked = true;
-      }
-    });
+  async function loadSettings() {
+    const data = await chrome.storage.sync.get({ presetBehavior: 'close_all', cloudSync: false, theme: 'light' });
+    cloudSyncToggle.checked = data.cloudSync;
+    themeToggle.checked = data.theme === 'dark';
+    document.body.classList.toggle('dark-theme', data.theme === 'dark');
+    const currentBehavior = data.presetBehavior;
+    const behaviorRadio = document.querySelector(`#settings-form input[name="preset-behavior"][value="${currentBehavior}"]`);
+    if (behaviorRadio) {
+      behaviorRadio.checked = true;
+    } else {
+      const defaultBehaviorRadio = document.querySelector('#settings-form input[name="preset-behavior"][value="close_all"]');
+      if (defaultBehaviorRadio) defaultBehaviorRadio.checked = true;
+    }
   }
 
   if (saveSettingsBtn) {
     saveSettingsBtn.addEventListener('click', saveSettings);
   }
 
+  themeToggle.addEventListener('change', () => {
+    document.body.classList.toggle('dark-theme', themeToggle.checked);
+  });
+
   // --- Import/Export View Logic ---
   if (exportPresetsBtn) {
     exportPresetsBtn.addEventListener('click', () => {
-      chrome.runtime.sendMessage({ action: "getPresets" }, (response) => {
+      chrome.runtime.sendMessage({ action: "getPresets", workspace: workspaceSelect.value }, (response) => {
         handleResponse(response, (r) => {
           const presets = r.presets || r;
           if (!presets || Object.keys(presets).length === 0) {
@@ -268,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (typeof importedPresetsData !== 'object' || importedPresetsData === null) {
             displayStatus('Invalid file format: Not a JSON object.', true, 5000); return;
           }
-          chrome.runtime.sendMessage({ action: "importPresets", data: importedPresetsData }, (response) => {
+          chrome.runtime.sendMessage({ action: "importPresets", data: importedPresetsData, workspace: workspaceSelect.value }, (response) => {
             handleResponse(response, (r) => {
               displayStatus(r.message || 'Presets imported successfully.', false, 3000);
               if (presetsView && presetsView.classList.contains('active')) { // Only load if presets view is active
@@ -292,18 +358,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Initialization ---
   if (presetsListDiv && statusMessageDiv) {
-    loadPresets();
+    loadWorkspaces();
   }
   if (settingsForm && statusMessageDiv) {
       loadSettings();
   }
 
   chrome.storage.onChanged.addListener((changes, namespace) => {
-    if (namespace === 'local' && changes.presets) {
-        console.log("Presets changed in storage, refreshing side panel preset list.");
+    if (namespace === 'local' && (changes.presets || changes.workspaces || changes.activeWorkspace)) {
+      if (presetsView && presetsView.classList.contains('active')) {
+          loadWorkspaces();
+      }
+    }
+    if (namespace === 'sync') {
+      if (changes.presets || changes.workspaces || changes.activeWorkspace || changes.cloudSync) {
         if (presetsView && presetsView.classList.contains('active')) {
-            loadPresets();
+            loadWorkspaces();
         }
+      }
+      if (changes.theme) {
+        loadSettings();
+      }
     }
   });
 });
