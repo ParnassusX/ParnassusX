@@ -2,6 +2,22 @@
 
 Window Layout Manager is a Chrome extension that helps you save and restore your Chrome window arrangements, making it easy to switch between different layouts for various tasks.
 
+## Project Status
+
+This document outlines the current state of the "Window Layout Manager" extension.
+
+*   **What is Real (Fully Implemented):** The application is a fully functional MVP (Minimum Viable Product). All core features described below under "Core MVP Features" are implemented, tested, and working. This includes capturing layouts, saving/applying/updating/deleting presets, import/export, and configurable settings via the side panel. The logic is robust and handles multiple displays.
+
+*   **What is Mock/Conceptual (Not Implemented):** Several markdown files (`.md`) in the repository outline potential future features (e.g., AI Preset Suggestions, Visual Preset Previews). **These are design concepts and ideas, not implemented features.** The code does not contain any logic related to these concepts. They exist for planning and discussion purposes.
+
+*   **Architecture & Logic:** The extension's logic is not mocked. It is fully wired and functional, with a clear separation of concerns:
+    *   `background.js`: Handles all core logic for window and preset management.
+    *   `sidepanel.js` / `sidepanel.html`: Provides the main UI for managing presets and settings.
+    *   `popup.js` / `popup.html`: Acts as a "quick action" menu for capturing and applying layouts.
+    *   The legacy `options.html` and `options.js` have been removed, and their functionality is now integrated into the side panel.
+
+---
+
 ## Core MVP Features
 
 *   **Save Window Layouts:** Capture your current setup of windows (their sizes, positions, and all open tabs) and save it as a named "preset" using the quick save feature in the extension popup.
