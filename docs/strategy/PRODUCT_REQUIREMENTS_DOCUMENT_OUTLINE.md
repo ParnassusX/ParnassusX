@@ -2,7 +2,7 @@
 
 ## 1. Introduction & Goals
 
-*   **1.1. Project Vision:** To be the leading Chrome extension for effortless window layout management, enhancing productivity and focus for users who regularly work with multiple windows and tabs.
+*   **1.1. Project Vision:** To be a reliable Chrome extension for window layout management, enhancing productivity and focus for users who regularly work with multiple windows and tabs.
 *   **1.2. Goals for this PRD (Next Phase):**
     *   Define key user personas and their specific needs.
     *   Solidify the core free offering, making it highly usable and "sticky."
@@ -10,7 +10,7 @@
     *   Ensure a modern, intuitive UI/UX that feels current for a "2025" target.
 *   **1.3. Success Metrics (High-Level - to be detailed later):**
     *   Active user growth.
-    *   High user satisfaction/ratings.
+    *   User satisfaction (to be measured; no data collected yet).
     *   Conversion rate to potential premium features (long-term).
     *   Positive user feedback on core MVP loop (save/apply presets).
 

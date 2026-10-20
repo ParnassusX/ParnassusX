@@ -1,11 +1,21 @@
 {
-  "name": "Chrome Extension Starter",
-  "description": "A basic starter template for a Chrome Extension.",
-  "version": "1.0",
+  "name": "Window Layout Manager",
+  "description": "Save and restore window and tab layouts as named presets.",
+  "version": "0.2.0",
   "manifest_version": 3,
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "action": {
     "default_popup": "popup.html",
-    "default_icon": "icon.png"
+    "default_title": "Window Layout Manager",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
   "permissions": [
     "windows",
@@ -17,31 +27,18 @@
   "background": {
     "service_worker": "background.js"
   },
-  "options_ui": {
-    "page": "options.html",
-    "open_in_tab": true
-  },
   "commands": {
     "apply-preset-1": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+1",
-        "mac": "Command+Shift+1"
-      },
-      "description": "Apply First Preset (alphabetical)"
+      "suggested_key": { "default": "Ctrl+Shift+1", "mac": "Command+Shift+1" },
+      "description": "Apply first preset (alphabetical)"
     },
     "apply-preset-2": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+2",
-        "mac": "Command+Shift+2"
-      },
-      "description": "Apply Second Preset (alphabetical)"
+      "suggested_key": { "default": "Ctrl+Shift+2", "mac": "Command+Shift+2" },
+      "description": "Apply second preset (alphabetical)"
     },
     "apply-preset-3": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+3",
-        "mac": "Command+Shift+3"
-      },
-      "description": "Apply Third Preset (alphabetical)"
+      "suggested_key": { "default": "Ctrl+Shift+3", "mac": "Command+Shift+3" },
+      "description": "Apply third preset (alphabetical)"
     }
   },
   "side_panel": {

@@ -233,6 +233,13 @@ document.addEventListener('DOMContentLoaded', () => {
     saveSettingsBtn.addEventListener('click', saveSettings);
   }
 
+  const goToShortcutsBtn = document.getElementById('go-to-shortcuts-btn');
+  if (goToShortcutsBtn) {
+    goToShortcutsBtn.addEventListener('click', () => {
+      chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+    });
+  }
+
   // --- Import/Export View Logic ---
   if (exportPresetsBtn) {
     exportPresetsBtn.addEventListener('click', () => {

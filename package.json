@@ -1,0 +1,11 @@
+{
+  "name": "window-layout-manager",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Chrome MV3 extension that saves and restores window and tab layouts.",
+  "scripts": {
+    "test": "node --test tests/layout.test.js",
+    "test:e2e": "node tests/e2e.js"
+  },
+  "license": "UNLICENSED"
+}
