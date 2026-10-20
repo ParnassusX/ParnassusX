@@ -1,36 +1,51 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <title>Window Layout Manager - Quick Save</title>
-  <link rel="stylesheet" type="text/css" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Window Layout Manager</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <h1>Quick Save Preset</h1>
+<body class="popup">
+  <main class="app">
+    <header class="header">
+      <img src="icons/icon48.png" alt="">
+      <h1>Window Layout Manager</h1>
+      <span class="spacer"></span>
+      <button id="open-manager" class="btn btn-ghost btn-icon" type="button" title="Open the manager" aria-label="Open the manager in the side panel"></button>
+    </header>
 
-  <div id="status-message" class="status"></div>
+    <section class="card" aria-labelledby="save-title">
+      <h2 id="save-title" class="card-title">Save this layout</h2>
+      <form id="save-form" class="stack">
+        <div class="row">
+          <input id="name" type="text" placeholder="Name, e.g. Code review" maxlength="100" aria-label="Preset name" autocomplete="off">
+          <button class="btn btn-primary" type="submit">Save</button>
+        </div>
+        <p class="muted">Captures every normal window with web tabs, on every screen.</p>
+      </form>
+    </section>
 
-  <div class="section" id="capture-layout-section">
-    <button id="capture-layout-btn" class="secondary">Capture Current Window Layout</button>
-    <div class="input-group" style="margin-top: 15px;">
-      <input type="text" id="preset-name-input" placeholder="Enter new preset name..." />
-      <button id="save-layout-btn">Save New Preset</button>
-    </div>
-  </div>
+    <section id="undo-card" class="card hidden" aria-labelledby="undo-title">
+      <h2 id="undo-title" class="card-title">Last apply</h2>
+      <div class="row">
+        <p id="undo-text" class="muted" style="flex:1"></p>
+        <button id="undo" class="btn" type="button"></button>
+      </div>
+    </section>
 
-  <div class="section">
-    <h2>Quick Apply</h2>
-    <div id="quick-apply-buttons" class="button-group vertical">
-      <!-- Quick apply buttons will be added here by JavaScript -->
-    </div>
-  </div>
+    <section class="card" aria-labelledby="quick-title">
+      <h2 id="quick-title" class="card-title">Quick apply</h2>
+      <div id="quick" class="quick"></div>
+    </section>
 
-  <!--
-    Instructions or link to side panel can be added here if desired, for example:
-    <p style="text-align: center; margin-top: 15px; font-size: 0.9em;">
-      Manage your saved presets in the <a href="#" id="open-side-panel-link">Side Panel</a>.
-    </p>
-  -->
+    <p class="muted small">Shortcuts Ctrl+Shift+1, 2 and 3 apply your first three presets.</p>
+  </main>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
+  <script src="lib/layout.js"></script>
+  <script src="lib/preview.js"></script>
+  <script src="lib/ui.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

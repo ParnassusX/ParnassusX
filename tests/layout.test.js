@@ -23,15 +23,15 @@ test('sanitizeLayout drops non-web tabs and keeps tab flags aligned with the sur
     left: 10, top: 10, width: 800, height: 600, state: 'normal', focused: true, displayId: '1',
     tabs: [
       { url: 'chrome://newtab/', pinned: true, active: false },
-      { url: 'https://a.test/', pinned: true, active: false },
-      { url: 'file:///secret', pinned: false, active: true },
-      { url: 'https://b.test/', pinned: false, active: true },
+      { url: 'https://a.test/', title: 'A', pinned: true, active: false },
+      { url: 'file:///secret', title: 'S', pinned: false, active: true },
+      { url: 'https://b.test/', title: 'B', pinned: false, active: true },
     ],
   }]));
   assert.ok(out);
   assert.deepEqual(out.windows[0].tabs, [
-    { url: 'https://a.test/', active: false, pinned: true },
-    { url: 'https://b.test/', active: true, pinned: false },
+    { url: 'https://a.test/', title: 'A', active: false, pinned: true },
+    { url: 'https://b.test/', title: 'B', active: true, pinned: false },
   ]);
 });
 
@@ -116,6 +116,89 @@ test('addPreset refuses to overwrite an existing name', () => {
   assert.equal(presets.Work.windows[0].tabs[0].url, 'https://a.test/', 'original preset untouched');
 });
 
+test('planPlacement scales a window proportionally when the work area changed', () => {
+  // Saved on a 1920x1040 screen; now the same screen is 3840x2080 (2x).
+  const saved = [{ id: '1', isPrimary: true, workArea: { left: 0, top: 0, width: 1920, height: 1040 } }];
+  const now = [{ id: '1', isPrimary: true, workArea: { left: 0, top: 0, width: 3840, height: 2080 } }];
+  const plan = WLM.planPlacement({ displayId: '1', left: 960, top: 520, width: 480, height: 260 }, now, saved, { fit: true });
+  assert.deepEqual([plan.left, plan.top, plan.width, plan.height], [1920, 1040, 960, 520]);
+});
+
+test('planPlacement without fit keeps absolute pixels', () => {
+  const saved = [{ id: '1', isPrimary: true, workArea: { left: 0, top: 0, width: 1920, height: 1040 } }];
+  const now = [{ id: '1', isPrimary: true, workArea: { left: 0, top: 0, width: 3840, height: 2080 } }];
+  const plan = WLM.planPlacement({ displayId: '1', left: 960, top: 520, width: 480, height: 260 }, now, saved, { fit: false });
+  assert.deepEqual([plan.left, plan.top, plan.width, plan.height], [960, 520, 480, 260]);
+});
+
+test('planPlacement fits a reference-screen library preset onto a smaller screen', () => {
+  const reference = [{ id: 'ref', isPrimary: true, workArea: { left: 0, top: 0, width: 1920, height: 1040 } }];
+  const small = [{ id: '9', isPrimary: true, workArea: { left: 0, top: 0, width: 1280, height: 800 } }];
+  const plan = WLM.planPlacement({ displayId: 'ref', left: 0, top: 0, width: 960, height: 1040 }, small, reference, { fit: true });
+  assert.deepEqual([plan.left, plan.top, plan.width, plan.height], [0, 0, 640, 800]);
+});
+
+test('displaySignature changes when the screen setup changes', () => {
+  const a = [{ id: '1', isPrimary: true, bounds: { left: 0, top: 0, width: 1920, height: 1080 } }];
+  const b = [{ id: '1', isPrimary: true, bounds: { left: 0, top: 0, width: 2560, height: 1440 } }];
+  assert.equal(WLM.displaySignature(a), WLM.displaySignature([...a]));
+  assert.notEqual(WLM.displaySignature(a), WLM.displaySignature(b));
+});
+
+test('updatePreset keeps the previous version and revertPreset restores it', () => {
+  const presets = {};
+  WLM.addPreset(presets, 'Work', layoutWith([{ tabs: [{ url: 'https://v1.test/' }] }]), 1000);
+  WLM.updatePreset(presets, 'Work', layoutWith([{ tabs: [{ url: 'https://v2.test/' }] }]), 2000);
+  assert.equal(presets.Work.history.length, 1);
+  assert.equal(presets.Work.windows[0].tabs[0].url, 'https://v2.test/');
+  const reverted = WLM.revertPreset(presets, 'Work', 3000);
+  assert.equal(reverted.ok, true);
+  assert.equal(presets.Work.windows[0].tabs[0].url, 'https://v1.test/');
+  // The swap keeps the replaced version, so reverting again goes back to v2.
+  assert.equal(presets.Work.history.length, 1);
+  WLM.revertPreset(presets, 'Work', 4000);
+  assert.equal(presets.Work.windows[0].tabs[0].url, 'https://v2.test/');
+  assert.equal(WLM.revertPreset({ Solo: WLM.normalizeStoredEntry(layoutWith([{ tabs: [{ url: 'https://s.test/' }] }]), 1) }, 'Solo', 5).ok, false, 'no earlier version');
+});
+
+test('history is capped', () => {
+  const presets = {};
+  WLM.addPreset(presets, 'W', layoutWith([{ tabs: [{ url: 'https://0.test/' }] }]), 0);
+  for (let i = 1; i <= 6; i++) {
+    WLM.updatePreset(presets, 'W', layoutWith([{ tabs: [{ url: `https://${i}.test/` }] }]), i);
+  }
+  assert.equal(presets.W.history.length, WLM.MAX_HISTORY);
+});
+
+test('renamePreset refuses a taken name and keeps history', () => {
+  const presets = {};
+  WLM.addPreset(presets, 'A', layoutWith([{ tabs: [{ url: 'https://a.test/' }] }]), 1);
+  WLM.addPreset(presets, 'B', layoutWith([{ tabs: [{ url: 'https://b.test/' }] }]), 1);
+  assert.equal(WLM.renamePreset(presets, 'A', 'B').ok, false);
+  assert.equal(WLM.renamePreset(presets, 'A', 'C').ok, true);
+  assert.ok(!presets.A && presets.C);
+});
+
+test('duplicatePreset creates a unique copy without history', () => {
+  const presets = {};
+  WLM.addPreset(presets, 'Work', layoutWith([{ tabs: [{ url: 'https://a.test/' }] }]), 1);
+  WLM.updatePreset(presets, 'Work', layoutWith([{ tabs: [{ url: 'https://b.test/' }] }]), 2);
+  const first = WLM.duplicatePreset(presets, 'Work', 3);
+  const second = WLM.duplicatePreset(presets, 'Work', 4);
+  assert.equal(first.name, 'Work (copy)');
+  assert.equal(second.name, 'Work (copy) 2');
+  assert.deepEqual(presets[first.name].history, []);
+  assert.equal(presets[first.name].windows[0].tabs[0].url, 'https://b.test/');
+});
+
+test('normalizeStoredEntry upgrades the flat v1 shape', () => {
+  const v1 = layoutWith([{ tabs: [{ url: 'https://old.test/' }] }]);
+  const entry = WLM.normalizeStoredEntry(v1, 42);
+  assert.equal(entry.version, 2);
+  assert.equal(entry.savedAt, 42);
+  assert.deepEqual(entry.history, []);
+});
+
 test('addPreset validates names', () => {
   const layout = layoutWith([{ tabs: [{ url: 'https://a.test/' }] }]);
   assert.equal(WLM.addPreset({}, '   ', layout).ok, false);
@@ -163,4 +246,15 @@ test('mergeImport rejects non-object input', () => {
   assert.equal(WLM.mergeImport({}, []).ok, false);
   assert.equal(WLM.mergeImport({}, null).ok, false);
   assert.equal(WLM.mergeImport({}, 'text').ok, false);
+});
+
+test('library installs are marked as reference layouts and survive normalization', () => {
+  const presets = {};
+  const result = WLM.installPreset(presets, 'Code review', layoutWith([{ tabs: [{ url: 'https://a.test/' }] }]), 5);
+  assert.equal(result.ok, true);
+  assert.equal(presets[result.name].reference, true);
+  assert.equal(WLM.normalizeStoredEntry(presets[result.name], 0).reference, true);
+  // A user edit turns it into an ordinary preset.
+  WLM.updatePreset(presets, result.name, layoutWith([{ tabs: [{ url: 'https://b.test/' }] }]), 6);
+  assert.equal(presets[result.name].reference, undefined);
 });

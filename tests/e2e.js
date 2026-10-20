@@ -1,6 +1,7 @@
 // End-to-end checks in real Chromium. Needs Playwright and a display:
 //   npm i --no-save playwright && xvfb-run -a npm run test:e2e
-// Set CHROME_BIN to use a specific Chrome/Chromium binary.
+// Set CHROME_BIN to use a specific Chrome/Chromium binary. Screenshots go to
+// SCREENSHOT_DIR when it is set.
 const http = require('http');
 const fs = require('fs');
 const os = require('os');
@@ -8,11 +9,13 @@ const path = require('path');
 const { chromium } = require('playwright');
 
 const EXT_DIR = path.resolve(__dirname, '..');
+const SHOTS = process.env.SCREENSHOT_DIR;
 const results = [];
 const check = (name, ok, detail) => {
   results.push({ name, ok });
   console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${ok || detail === undefined ? '' : ' :: ' + JSON.stringify(detail)}`);
 };
+const wait = ms => new Promise(r => setTimeout(r, ms));
 
 async function main() {
   const server = http.createServer((req, res) => {
@@ -33,64 +36,118 @@ async function main() {
     const extId = new URL(sw.url()).host;
     check('service worker starts', !!sw);
 
-    // The popup runs in a popup-type window so that closing normal windows
-    // during apply does not close the page that drives the test.
-    await sw.evaluate(u => chrome.windows.create({ url: u, type: 'popup', width: 380, height: 600 }), `chrome-extension://${extId}/popup.html`);
-    await new Promise(r => setTimeout(r, 800));
-    const page = ctx.pages().find(p => p.url().startsWith(`chrome-extension://${extId}/popup.html`));
-    const pageErrors = [];
-    page.on('pageerror', e => pageErrors.push(String(e)));
-    const send = msg => page.evaluate(m => new Promise(r => chrome.runtime.sendMessage(m, r)), msg);
+    // Host pages live in popup-type windows so closing normal windows during
+    // apply does not close the page driving the test.
+    const openHost = async (file, width, height) => {
+      await sw.evaluate(([u, w, h]) => chrome.windows.create({ url: u, type: 'popup', width: w, height: h }),
+        [`chrome-extension://${extId}/${file}`, width, height]);
+      await wait(800);
+      return ctx.pages().find(p => p.url() === `chrome-extension://${extId}/${file}`);
+    };
+    const popup = await openHost('popup.html', 380, 560);
+    const panel = await openHost('sidepanel.html', 400, 760);
+    const errors = [];
+    for (const p of [popup, panel]) p.on('pageerror', e => errors.push(String(e)));
+
+    const send = (page, msg) => page.evaluate(m => new Promise(r => chrome.runtime.sendMessage(m, r)), msg);
     const fresh = () => sw.evaluate(() => chrome.storage.local.clear());
     const normalWindows = () => sw.evaluate(() => chrome.windows.getAll({ populate: true, windowTypes: ['normal'] })
       .then(ws => ws.map(w => ({ tabs: w.tabs.map(t => ({ url: t.url, pinned: t.pinned })) }))));
+    const allUrls = async () => (await normalWindows()).flatMap(w => w.tabs.map(t => t.url));
 
-    // Scenario: two windows, the first with a pinned first tab.
     await fresh();
-    await sw.evaluate(async base => {
-      const w = await chrome.windows.create({ url: base + '/a' });
+    await sw.evaluate(async b => {
+      const w = await chrome.windows.create({ url: b + '/a' });
       await chrome.tabs.update(w.tabs[0].id, { pinned: true });
-      await chrome.tabs.create({ windowId: w.id, url: base + '/b', active: true });
-      await chrome.windows.create({ url: base + '/c' });
+      await chrome.tabs.create({ windowId: w.id, url: b + '/b', active: true });
+      await chrome.windows.create({ url: b + '/c' });
     }, base);
-    await new Promise(r => setTimeout(r, 600));
+    await wait(600);
 
-    const cap = await send({ action: 'captureLayout' });
-    check('capture succeeds', cap.status === 'success', cap);
-    const saved = await send({ action: 'savePreset', presetName: 'Work', layoutData: cap.layout });
-    check('save succeeds', saved.status === 'success' && saved.success === true, saved);
-
-    const dup = await send({ action: 'savePreset', presetName: 'Work', layoutData: cap.layout });
+    // ---- Save, capture, duplicate protection ----
+    const saved = await send(popup, { action: 'saveCurrentLayout', presetName: 'Work' });
+    check('save current layout succeeds', saved.status === 'success' && saved.success === true, saved);
+    const dup = await send(popup, { action: 'saveCurrentLayout', presetName: 'Work' });
     check('saving an existing name is refused with an error status', dup.status === 'error' && dup.success === false, dup);
 
-    const applied = await send({ action: 'applyPreset', presetName: 'Work' });
+    // ---- Apply restores URLs and the pinned flag ----
+    const applied = await send(popup, { action: 'applyPreset', presetName: 'Work' });
     check('apply succeeds', applied.status === 'success', applied);
-    await new Promise(r => setTimeout(r, 1500));
-    const after = await normalWindows();
-    const urls = after.flatMap(w => w.tabs.map(t => t.url));
+    await wait(1500);
+    const urls = await allUrls();
     check('restored windows contain every saved URL', ['/a', '/b', '/c'].every(p => urls.some(u => u && u.endsWith(p))), urls);
-    const restoredFirst = after.flatMap(w => w.tabs).find(t => t.url && t.url.endsWith('/a'));
-    check('pinned flag survives on the restored first tab', !!(restoredFirst && restoredFirst.pinned), restoredFirst);
+    const first = (await normalWindows()).flatMap(w => w.tabs).find(t => t.url && t.url.endsWith('/a'));
+    check('pinned flag survives on the restored first tab', !!(first && first.pinned), first);
 
-    // Concurrent writes must not drop each other.
-    await fresh();
-    await page.evaluate((layout) => Promise.all(Array.from({ length: 8 }, (_, i) => new Promise(r =>
-      chrome.runtime.sendMessage({ action: 'savePreset', presetName: 'P' + i, layoutData: layout }, r)))), cap.layout);
-    const stored = await sw.evaluate(() => chrome.storage.local.get('presets')).then(d => Object.keys(d.presets || {}).length);
-    check('8 concurrent saves all persist', stored === 8, { stored });
+    // ---- Undo last apply ----
+    const undoInfo = await send(panel, { action: 'getLastSession' });
+    check('apply that closed windows is remembered for undo', !!undoInfo.session, undoInfo);
+    const beforeUndo = (await normalWindows()).length;
+    const undone = await send(panel, { action: 'undoLastApply' });
+    check('undo last apply succeeds', undone.status === 'success', undone);
+    await wait(1500);
+    const afterUndo = await allUrls();
+    check('undo brings the closed windows back', afterUndo.some(u => u && u.endsWith('/c')) && afterUndo.some(u => u && u.endsWith('/a')), { beforeUndo, afterUndo });
+    check('undo clears the remembered session', (await send(panel, { action: 'getLastSession' })).session === null);
 
-    // Imported presets with non-web URLs are dropped, and applying opens nothing local.
-    await fresh();
-    const imp = await send({ action: 'importPresets', data: { Evil: { windows: [{ tabs: [{ url: 'file:///etc/hostname' }] }], displays: [] } } });
-    check('import with only file: URLs is not stored', imp.success === false || !(await send({ action: 'getPresets' })).presets.Evil, imp);
+    // ---- Versions: update then restore previous ----
+    await sw.evaluate(async b => { await chrome.tabs.create({ url: b + '/d' }); }, base);
+    const upd = await send(panel, { action: 'updateCurrentLayout', presetName: 'Work' });
+    check('update keeps the previous version', upd.success === true, upd);
+    const reverted = await send(panel, { action: 'revertPreset', presetName: 'Work' });
+    check('restore previous version succeeds', reverted.success === true, reverted);
+    const stored = (await send(panel, { action: 'getPresets' })).presets.Work;
+    check('restored version does not include the newer tab', !JSON.stringify(stored.windows).includes('/d'), stored.windows.map(w => w.tabs.length));
+
+    // ---- Rename and duplicate ----
+    const renamed = await send(panel, { action: 'renamePreset', presetName: 'Work', newName: 'Deep work' });
+    check('rename succeeds', renamed.success === true, renamed);
+    const copied = await send(panel, { action: 'duplicatePreset', presetName: 'Deep work' });
+    check('duplicate creates a copy', copied.success === true, copied);
+    const names = Object.keys((await send(panel, { action: 'getPresets' })).presets);
+    check('names after rename and duplicate', names.includes('Deep work') && names.includes('Deep work (copy)'), names);
+
+    // ---- Library: install and apply a built-in layout ----
+    const lib = JSON.parse(fs.readFileSync(path.join(EXT_DIR, 'library', 'presets.json'), 'utf8')).presets;
+    const installed = await send(panel, { action: 'installPreset', presetName: lib[0].name, layoutData: lib[0].layout });
+    check('library preset installs', installed.success === true, installed);
+    const again = await send(panel, { action: 'installPreset', presetName: lib[0].name, layoutData: lib[0].layout });
+    check('installing the same library preset twice gets a unique name', again.success === true, again);
+
+    // ---- Import rejects file: URLs, apply of stored file: presets is refused ----
     await sw.evaluate(() => chrome.storage.local.set({ presets: { Evil: { windows: [{ tabs: [{ url: 'file:///etc/hostname' }] }], displays: [] } } }));
-    const evilApply = await send({ action: 'applyPreset', presetName: 'Evil' });
-    check('applying a stored file: preset is refused', evilApply.status === 'error', evilApply);
-    await new Promise(r => setTimeout(r, 1500));
+    const evil = await send(panel, { action: 'applyPreset', presetName: 'Evil' });
+    check('applying a stored file: preset is refused', evil.status === 'error', evil);
+    await wait(1200);
     const tabUrls = await sw.evaluate(() => chrome.tabs.query({}).then(ts => ts.map(t => t.url)));
     check('no file: tab is opened', !tabUrls.some(u => u && u.startsWith('file:')), tabUrls);
 
-    check('popup page raised no uncaught errors', pageErrors.length === 0, pageErrors);
+    // ---- Screens info and settings ----
+    const screens = await send(panel, { action: 'getDisplays' });
+    check('display info is reported with a signature', screens.status === 'success' && typeof screens.signature === 'string', screens);
+
+    // ---- Screenshots for visual review ----
+    if (SHOTS) {
+      fs.mkdirSync(SHOTS, { recursive: true });
+      // Realistic content for the screenshots (the Evil test above replaced storage).
+      await fresh();
+      for (const item of lib.slice(0, 4)) await send(panel, { action: 'installPreset', presetName: item.name, layoutData: item.layout });
+      await send(panel, { action: 'saveCurrentLayout', presetName: 'Deep work' });
+      await popup.reload(); await wait(500);
+      await popup.screenshot({ path: path.join(SHOTS, 'popup.png') });
+      await panel.reload(); await wait(700);
+      await panel.screenshot({ path: path.join(SHOTS, 'sidepanel-presets.png') });
+      await panel.click('#tab-library'); await wait(600);
+      await panel.screenshot({ path: path.join(SHOTS, 'sidepanel-library.png') });
+      await panel.click('#tab-settings'); await wait(400);
+      await panel.screenshot({ path: path.join(SHOTS, 'sidepanel-settings.png') });
+      await panel.emulateMedia({ colorScheme: 'dark' });
+      await panel.click('#tab-presets'); await wait(500);
+      await panel.screenshot({ path: path.join(SHOTS, 'sidepanel-presets-dark.png') });
+      await panel.emulateMedia({ colorScheme: 'light' });
+    }
+
+    check('extension pages raised no uncaught errors', errors.length === 0, errors);
   } finally {
     await ctx.close();
     server.close();

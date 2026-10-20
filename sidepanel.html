@@ -1,147 +1,100 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <title>Window Presets Manager</title>
-  <link rel="stylesheet" type="text/css" href="style.css">
-  <style>
-    body {
-      padding: 0; /* Remove body padding, container will handle it */
-      margin: 0;
-      min-width: 320px; /* Slightly wider for nav */
-      background-color: var(--light-gray-color);
-      display: flex;
-      flex-direction: column;
-      height: 100vh; /* Full viewport height */
-    }
-    .sidepanel-nav {
-      display: flex;
-      justify-content: space-around;
-      background-color: var(--medium-gray-color);
-      padding: 5px 0;
-      flex-shrink: 0; /* Prevent nav from shrinking */
-    }
-    .nav-button {
-      padding: 8px 10px;
-      border: none;
-      background-color: transparent;
-      color: var(--text-color);
-      cursor: pointer;
-      font-size: 0.9em;
-      flex-grow: 1;
-      text-align: center;
-      border-bottom: 3px solid transparent;
-    }
-    .nav-button.active {
-      background-color: var(--light-gray-color);
-      border-bottom: 3px solid var(--primary-color);
-      font-weight: bold;
-    }
-    .nav-button:hover:not(.active) {
-        background-color: #d3d9df;
-    }
-
-    .view-container {
-      padding: 10px; /* Padding for the content of each view */
-      flex-grow: 1; /* Allows content to take available space */
-      overflow-y: auto; /* Add scroll for long content */
-    }
-    .view {
-      display: none; /* Hidden by default */
-    }
-    .view.active {
-      display: block; /* Show active view */
-    }
-
-    /* Ensure sections within views don't have excessive top margin if nav is present */
-    .view .section:first-child {
-        /* margin-top: 0; */ /* This might be too aggressive, manage spacing within view */
-    }
-    #sidepanel-presets-list {
-        /* flex-grow: 1; */ /* Not needed directly here if view-container handles growth */
-        overflow-y: auto;
-        min-height: 100px;
-    }
-    /* Adjust button widths within sidepanel sections if needed */
-    .section button {
-        /* width: auto; */ /* Allow buttons to size naturally unless full-width is desired */
-    }
-    #refresh-presets-btn {
-        width: 100%;
-        margin-bottom: 10px;
-    }
-    #save-settings-btn { /* Renamed from save-options-btn for clarity */
-        display: block;
-        margin: 20px auto 0 auto;
-        min-width: 150px;
-    }
-  </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Window Layout Manager</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <div class="sidepanel-nav">
-    <button class="nav-button active" data-view="presets-view">Presets</button>
-    <button class="nav-button" data-view="settings-view">Settings</button>
-    <button class="nav-button" data-view="import-export-view">Import/Export</button>
-  </div>
+<body class="sidepanel">
+  <main class="app">
+    <header class="header">
+      <img src="icons/icon48.png" alt="">
+      <h1>Window Layout Manager</h1>
+    </header>
 
-  <!-- Status message area - consider a single one or per-view -->
-  <div id="sidepanel-status-message" class="status view-container" style="padding-bottom: 0; flex-grow:0; max-height: 50px;"></div>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" role="tab" id="tab-presets" aria-controls="panel-presets" aria-selected="true" data-tab="presets">Presets</button>
+      <button class="tab" role="tab" id="tab-library" aria-controls="panel-library" aria-selected="false" data-tab="library" tabindex="-1">Library</button>
+      <button class="tab" role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="false" data-tab="settings" tabindex="-1">Settings</button>
+      <button class="tab" role="tab" id="tab-data" aria-controls="panel-data" aria-selected="false" data-tab="data" tabindex="-1">Data</button>
+    </nav>
 
-
-  <div id="presets-view" class="view active view-container">
-    <!-- <h1>Presets</h1> --> <!-- Title can be part of the nav or header -->
-    <div class="section" style="margin-top:0;"> <!-- Presets content section -->
-      <button id="refresh-presets-btn" class="secondary">Refresh List</button>
-      <div id="sidepanel-presets-list">
-        <!-- Presets will be listed here by sidepanel.js -->
+    <section id="panel-presets" class="tab-panel stack" role="tabpanel" aria-labelledby="tab-presets">
+      <div id="undo-banner" class="banner hidden"></div>
+      <div id="screens-banner" class="banner hidden"></div>
+      <div class="row">
+        <input id="search" type="search" placeholder="Search presets" aria-label="Search presets">
+        <button id="capture" class="btn btn-primary" type="button"></button>
       </div>
-    </div>
-  </div>
+      <div id="preset-list" class="preset-list" aria-live="polite"></div>
+    </section>
 
-  <div id="settings-view" class="view view-container">
-    <!-- Content moved from options.html -->
-    <div class="section" style="margin-top:0;">
-      <h2>Preset Application Behavior</h2>
-      <form id="settings-form"> <!-- Changed ID for clarity -->
-        <div>
-          <input type="radio" id="behavior-close-all" name="preset-behavior" value="close_all">
-          <label for="behavior-close-all">Close all other windows before applying preset</label>
-        </div>
-        <div>
-          <input type="radio" id="behavior-smart-close-pinned" name="preset-behavior" value="smart_close_pinned">
-          <label for="behavior-smart-close-pinned">Smart Close: Keep windows that have pinned tabs</label>
-        </div>
-        <div>
-          <input type="radio" id="behavior-merge" name="preset-behavior" value="merge">
-          <label for="behavior-merge">Merge with existing windows (experimental)</label>
-        </div>
-      </form>
-    </div>
-    <button id="save-settings-btn">Save Settings</button>
+    <section id="panel-library" class="tab-panel stack" role="tabpanel" aria-labelledby="tab-library" hidden>
+      <p class="muted">Ready-made layouts for common work. They are scaled to your screen when you add and apply them.</p>
+      <div id="library-list" class="library-grid"></div>
+    </section>
 
-    <div class="section">
-      <h2>Keyboard Shortcuts</h2>
-      <p>Ctrl+Shift+1, 2 and 3 (Command on Mac) apply your first three presets, alphabetically.</p>
-      <p class="info-text"><strong>Warning:</strong> with "Close all other windows", a shortcut closes your other windows without asking.</p>
-      <button id="go-to-shortcuts-btn" class="secondary">Change shortcuts in Chrome</button>
-    </div>
-    <!-- Specific status for settings if needed, or use the global one -->
-    <!-- <div id="sidepanel-settings-status" class="status"></div> -->
-  </div>
-
-  <div id="import-export-view" class="view view-container">
-    <!-- Content moved from options.html -->
-    <div class="section" style="margin-top:0;">
-      <h2>Import/Export Presets</h2>
-      <button id="export-presets-btn">Export All Presets</button>
-      <div style="margin-top: 15px;">
-        <input type="file" id="import-file-input" accept=".json" style="display: block; margin-bottom: 10px;">
-        <button id="import-presets-btn">Import Presets from File</button>
+    <section id="panel-settings" class="tab-panel stack" role="tabpanel" aria-labelledby="tab-settings" hidden>
+      <div class="card">
+        <h2 class="card-title">When applying a layout</h2>
+        <div class="stack" role="radiogroup" aria-label="When applying a layout">
+          <label class="choice"><input type="radio" name="behavior" value="close_all">
+            <span><strong>Close other windows first</strong><small>Closes every other window. Use Undo if it was a mistake.</small></span></label>
+          <label class="choice"><input type="radio" name="behavior" value="smart_close_pinned">
+            <span><strong>Keep windows with pinned tabs</strong><small>Closes the others, but leaves any window that has a pinned tab.</small></span></label>
+          <label class="choice"><input type="radio" name="behavior" value="merge">
+            <span><strong>Add alongside</strong><small>Opens the layout without closing anything. Windows can end up duplicated.</small></span></label>
+        </div>
       </div>
-    </div>
-     <!-- Specific status for import/export if needed, or use the global one -->
-    <!-- <div id="sidepanel-import-export-status" class="status"></div> -->
-  </div>
 
+      <div class="card">
+        <h2 class="card-title">Screens</h2>
+        <label class="toggle">
+          <span><strong>Scale to the current screen</strong><br><small class="muted">If a screen is a different size, windows keep their place on it instead of their exact pixels.</small></span>
+          <input id="fit" type="checkbox">
+        </label>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Appearance</h2>
+        <label class="toggle">
+          <span><strong>Theme</strong></span>
+          <select id="theme" aria-label="Theme">
+            <option value="system">Match system</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Keyboard shortcuts</h2>
+        <p class="muted">Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>1</kbd>, <kbd>2</kbd> or <kbd>3</kbd> (<kbd>Command</kbd> on Mac) to apply your first three presets, in alphabetical order.</p>
+        <button id="shortcuts" class="btn btn-block" type="button">Change shortcuts in Chrome</button>
+      </div>
+    </section>
+
+    <section id="panel-data" class="tab-panel stack" role="tabpanel" aria-labelledby="tab-data" hidden>
+      <div class="card stack">
+        <h2 class="card-title">Export</h2>
+        <p class="muted">Download all presets as a JSON file. Keep it as a backup or share it.</p>
+        <button id="export" class="btn btn-block" type="button"></button>
+      </div>
+      <div class="card stack">
+        <h2 class="card-title">Import</h2>
+        <p class="muted">Presets with the same name are replaced. Tabs that are not web pages (file:, chrome:) are dropped.</p>
+        <label class="sr-only" for="import-file">Choose a JSON file</label>
+        <input id="import-file" type="file" accept="application/json,.json">
+        <button id="import" class="btn btn-block" type="button"></button>
+      </div>
+    </section>
+  </main>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <script src="lib/layout.js"></script>
+  <script src="lib/preview.js"></script>
+  <script src="lib/ui.js"></script>
   <script src="sidepanel.js"></script>
 </body>
 </html>

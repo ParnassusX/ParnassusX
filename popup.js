@@ -1,171 +1,94 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const captureLayoutBtn = document.getElementById('capture-layout-btn');
-  const saveLayoutBtn = document.getElementById('save-layout-btn');
-  const presetNameInput = document.getElementById('preset-name-input');
-  const statusMessageDiv = document.getElementById('status-message');
-  const quickApplyContainer = document.getElementById('quick-apply-buttons');
+  const { send, h, icon, preview, toast, summaryLine, formatDate } = UI;
+  const form = document.getElementById('save-form');
+  const nameInput = document.getElementById('name');
+  const quick = document.getElementById('quick');
+  const undoCard = document.getElementById('undo-card');
+  const undoText = document.getElementById('undo-text');
+  const undoButton = document.getElementById('undo');
+  const openManager = document.getElementById('open-manager');
 
-  let capturedLayout = null;
-  let statusTimeout = null;
+  openManager.replaceChildren(icon('layers'));
+  chrome.storage.sync.get({ theme: 'system' }, ({ theme }) => {
+    if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+  });
+  undoButton.replaceChildren(icon('undo'), 'Undo');
 
-  function displayStatus(message, isError = false, duration = 5000) {
-    if (!statusMessageDiv) {
-        console.error("Status message div not found. Message:", message);
-        return;
+  async function renderQuick() {
+    const response = await send({ action: 'getPresets' });
+    quick.replaceChildren();
+    if (response.status !== 'success') {
+      quick.append(h('p', { class: 'muted', text: response.message || 'Could not load presets.' }));
+      return;
     }
-    if (statusTimeout) {
-      clearTimeout(statusTimeout);
+    const names = Object.keys(response.presets).sort().slice(0, 3);
+    if (names.length === 0) {
+      quick.append(h('p', { class: 'muted', text: 'No presets yet. Arrange your windows, then save the layout above.' }));
+      return;
     }
-    statusMessageDiv.textContent = message;
-    statusMessageDiv.className = 'status visible ' + (isError ? 'status-error' : 'status-success');
-
-    statusTimeout = setTimeout(() => {
-      statusMessageDiv.className = 'status';
-    }, duration);
+    for (const name of names) {
+      const entry = response.presets[name];
+      quick.append(h('div', { class: 'quick-item' },
+        preview(entry),
+        h('div', { style: 'min-width:0' },
+          h('div', { class: 'preset-name', title: name, text: name }),
+          h('div', { class: 'preset-meta', text: summaryLine(entry) })),
+        h('button', { class: 'btn btn-primary', type: 'button', onclick: () => apply(name), 'aria-label': `Apply ${name}` }, icon('apply'), 'Apply'),
+      ));
+    }
   }
 
-  function handleResponse(response, successCallback, errorPrefix = "Error") {
-    if (chrome.runtime.lastError) {
-      const errorMessage = `${errorPrefix}: ${chrome.runtime.lastError.message}`;
-      displayStatus(errorMessage, true);
-      console.error(errorMessage);
-      if (successCallback !== displayStatus) return;
+  async function renderUndo() {
+    const response = await send({ action: 'getLastSession' });
+    const session = response.session;
+    undoCard.classList.toggle('hidden', !session);
+    if (session) {
+      undoText.textContent = `Replaced ${UI.plural(session.windows, 'window')} at ${new Date(session.savedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}.`;
     }
-    if (response && response.status === "error") {
-      const errorMessage = `${errorPrefix}: ${response.message || 'Unknown error from background.'}`;
-      displayStatus(errorMessage, true);
-      console.error(errorMessage);
-    } else if (response && (response.status === "success" || response.success)) {
-      if (successCallback) successCallback(response); // Pass full response for more flexibility
+  }
+
+  async function apply(name) {
+    const response = await send({ action: 'applyPreset', presetName: name });
+    if (response.status === 'success') {
+      toast(`Applied "${name}".`, 'success');
+      setTimeout(() => window.close(), 700);
     } else {
-      if (response && typeof response.layout !== 'undefined' && successCallback) {
-         successCallback(response);
-      } else if (response && typeof response.presets !== 'undefined' && successCallback) {
-         successCallback(response);
-      }
-      else {
-        const errorMessage = `Unexpected response structure from ${errorPrefix}.`;
-        displayStatus(errorMessage, true);
-        console.warn(errorMessage, response);
-      }
+      toast(response.message || 'Could not apply the preset.', 'error');
     }
+    renderUndo();
   }
 
-  async function loadQuickApplyButtons() {
-    if (!quickApplyContainer) {
-        console.error("Quick apply container not found.");
-        return;
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const name = nameInput.value.trim();
+    if (!name) {
+      toast('Enter a name for the layout first.', 'error');
+      nameInput.focus();
+      return;
     }
-    quickApplyContainer.innerHTML = '';
+    const response = await send({ action: 'saveCurrentLayout', presetName: name });
+    if (response.status === 'success' && response.success) {
+      toast(response.message, 'success');
+      nameInput.value = '';
+      renderQuick();
+    } else {
+      toast(response.message || 'Could not save the layout.', 'error');
+    }
+  });
 
-    chrome.runtime.sendMessage({ action: "getPresets" }, function(response) {
-      if (chrome.runtime.lastError) {
-        handleResponse({ status: 'error', message: chrome.runtime.lastError.message },
-                       (r) => displayStatus(r.message, true),
-                       "Error loading presets");
-        quickApplyContainer.innerHTML = '<p class="info-text">Could not load presets.</p>';
-        return;
-      }
-      handleResponse(response,
-        (r) => {
-          const presets = r.presets || r;
-          if (!presets || typeof presets !== 'object') { // Check if presets is an object
-            displayStatus("Error: Invalid presets data received.", true);
-            quickApplyContainer.innerHTML = '<p class="info-text">Could not load presets.</p>';
-            return;
-          }
+  undoButton.addEventListener('click', async () => {
+    const response = await send({ action: 'undoLastApply' });
+    toast(response.message, response.status === 'success' ? 'success' : 'error');
+    renderUndo();
+  });
 
-          const sortedPresetNames = Object.keys(presets).sort();
-          const topPresets = sortedPresetNames.slice(0, 3);
-
-          if (topPresets.length === 0) {
-            quickApplyContainer.innerHTML = `<p class="info-text">Welcome! 👋<br>
-                1. Arrange your windows as you like them.<br>
-                2. Click "Capture Current Window Layout" above.<br>
-                3. Give your layout a name and click "Save New Preset".</p>`;
-            return;
-          }
-
-          topPresets.forEach(presetName => {
-            const button = document.createElement('button');
-            const displayName = presetName.length > 25 ? presetName.substring(0, 22) + "..." : presetName;
-            button.textContent = `Apply "${displayName}"`;
-            button.title = `Apply preset: ${presetName}`;
-            button.classList.add('quick-apply-btn', 'secondary');
-            button.dataset.presetName = presetName;
-
-            button.addEventListener('click', function() {
-              const nameToApply = this.dataset.presetName;
-              displayStatus(`Applying preset "${nameToApply}"...`, false, 2000);
-              chrome.runtime.sendMessage({ action: "applyPreset", presetName: nameToApply }, function(applyResponse) {
-                handleResponse(applyResponse,
-                               (resp) => {
-                                 displayStatus(resp.message || `Preset "${nameToApply}" applied.`, false);
-                                 setTimeout(() => window.close(), 1200);
-                               },
-                               `Error applying "${nameToApply}"`);
-              });
-            });
-            quickApplyContainer.appendChild(button);
-          });
-        },
-        "Error loading presets for Quick Apply"
-      );
-      if (!(response && (response.status === 'success' || response.success))) {
-           quickApplyContainer.innerHTML = '<p class="info-text">Could not load presets.</p>';
-      }
+  openManager.addEventListener('click', () => {
+    chrome.windows.getCurrent(win => {
+      chrome.sidePanel.open({ windowId: win.id }).catch(error => toast(`Could not open the side panel: ${error.message}`, 'error'));
     });
-  }
+  });
 
-  if (captureLayoutBtn) {
-    captureLayoutBtn.addEventListener('click', () => {
-      displayStatus('Capturing layout...', false, 2000);
-      chrome.runtime.sendMessage({ action: "captureLayout" }, (response) => {
-        handleResponse(response, (r) => {
-          capturedLayout = r.layout;
-          displayStatus(r.message || 'Layout captured! Enter name and save.', false);
-          console.log("Captured layout in popup:", capturedLayout);
-        }, "Error capturing layout");
-        if (!(response && (response.status === "success" || response.success) && response.layout)) {
-            capturedLayout = null;
-        }
-      });
-    });
-  } else {
-      console.error("Element with ID 'capture-layout-btn' not found.");
-  }
-
-  if (saveLayoutBtn) {
-    saveLayoutBtn.addEventListener('click', () => {
-      const presetName = presetNameInput.value.trim();
-      if (!presetName) {
-        displayStatus('Please enter a name for the new preset.', true);
-        return;
-      }
-      if (!capturedLayout) {
-        displayStatus('Please capture a layout first. Click "Capture Current Window Layout".', true);
-        return;
-      }
-
-      const layoutDataToSave = capturedLayout;
-
-      chrome.runtime.sendMessage({ action: "savePreset", presetName: presetName, layoutData: layoutDataToSave }, (response) => {
-        handleResponse(response, (r) => {
-          // Use the message from background.js as it's specific (saved or updated)
-          displayStatus(r.message || `Preset "${presetName}" processed successfully!`, false);
-          if(presetNameInput) presetNameInput.value = '';
-          capturedLayout = null;
-          // Refresh Quick Apply buttons after successful save, ensuring user sees confirmation first
-          loadQuickApplyButtons();
-        }, `Error saving preset "${presetName}"`);
-      });
-    });
-  } else {
-      console.error("Element with ID 'save-layout-btn' not found.");
-  }
-
-  if(!statusMessageDiv) console.error("Element with ID 'status-message' not found.");
-  if(!presetNameInput) console.error("Element with ID 'preset-name-input' not found.");
-
-  loadQuickApplyButtons();
+  renderQuick();
+  renderUndo();
+  nameInput.focus();
 });

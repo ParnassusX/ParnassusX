@@ -1,56 +1,78 @@
 # Window Layout Manager
 
-A Chrome extension (Manifest V3) that saves the layout of your windows and tabs as named presets, and restores them later.
+A Chrome extension (Manifest V3) that saves the layout of your windows and tabs as named presets, and restores them later. Presets adapt when your screens change.
 
-Status: early version, tested on a single display. Multi-monitor restore is best effort and has not been tested on a real multi-display setup.
+Status: early version. Tested in Chromium on a single display. Multi-monitor placement is covered by unit tests, not by a real multi-screen run.
 
-## Features
+## What it does
 
-- **Save a layout:** click the toolbar icon, press "Capture Current Window Layout", name it, press "Save New Preset". Saving under an existing name is refused; use Update to overwrite.
-- **Apply a layout:** the popup shows the first three presets (alphabetical) for quick apply; the side panel lists all of them.
-- **Update / delete:** from the side panel. Delete asks for confirmation.
-- **Keyboard shortcuts:** Ctrl+Shift+1, 2, 3 (Command on Mac) apply the first three presets. Change them in `chrome://extensions/shortcuts`.
-- **Settings (side panel, Settings tab):** how to apply a layout:
-  - *Close all other windows* (default). Note: a shortcut closes your other windows without asking.
-  - *Smart Close*: keeps windows that have pinned tabs.
-  - *Merge*: opens the preset without closing anything. Windows can end up duplicated.
-- **Import / Export (side panel):** export all presets to JSON, or import a JSON file. Imported presets are merged with yours; a name conflict overwrites the existing preset.
+**Save.** Click the toolbar icon, name the layout, press Save. Every normal window with web tabs is captured: position, size, state, screen, and each tab's address, title, pinned and active state. Minimized windows and non-web tabs (`chrome://`, `file://`, extension pages) are skipped.
 
-## What is saved
+**Apply.** The popup shows your first three presets for quick apply. The side panel lists all of them, with a thumbnail, window and tab counts, and a list of the tabs to check before you apply.
 
-- Window position, size, state (normal, maximized, fullscreen), focus, and the display it was on.
-- Each tab's web address (`http://` and `https://` only), active state and pinned state.
+**Undo.** Applying a layout with "Close other windows first" closes windows. Before it does, the current windows are remembered. The popup and side panel then offer **Undo**, which brings them back without closing anything else.
 
-Tabs with other addresses (`chrome://`, `file://`, `about:`, extension pages) are not saved. Imported files are checked the same way, so a preset cannot open local files.
+**Versions.** *Update* replaces a preset with the current layout, and keeps the previous version (up to three). *Restore previous version* swaps back, and can be undone the same way.
+
+**Library.** Six ready-made layouts for common work: code review, writing with sources, daily planning, presentation prep, reading session, meeting focus. Add any of them to your presets. You can rename a library copy and edit it like any other preset.
+
+**Screens.** Layouts remember the screen they were saved on.
+- If the screen is missing, windows go to the primary screen.
+- If the screen is the same size, windows return to their exact position.
+- If the screen is a different size, the layout is scaled proportionally (*Scale to the current screen*, on by default).
+- Positions are always kept inside the visible work area.
+- When screens change while the side panel is open, the list refreshes and a banner explains which presets are scaled.
+
+**Manage.** Search, rename, duplicate, delete (with confirmation), update, export and import JSON. Light, dark and system themes.
+
+**Shortcuts.** Ctrl+Shift+1, 2 and 3 (Command on Mac) apply the first three presets alphabetically. Change them in `chrome://extensions/shortcuts`.
+
+**Apply behaviour** (Settings tab):
+- *Close other windows first* (default). A shortcut closes your other windows without asking; Undo brings them back.
+- *Keep windows with pinned tabs*: closes the others, but leaves windows that have a pinned tab.
+- *Add alongside*: opens the layout without closing anything. Windows can end up duplicated.
+
+## Storage
+
+- Presets, their history and the last-apply snapshot are stored in `chrome.storage.local`, on this device only.
+- Settings (apply behaviour, scaling, theme) are in `chrome.storage.sync`, so they follow your Chrome profile.
+- Presets saved by the first version are upgraded when they are read. Nothing needs to be migrated by hand.
+- Every write goes through one queue, so simultaneous saves cannot overwrite each other.
+- Nothing is sent anywhere. There is no account and no sync.
 
 ## Permissions
 
-- `windows`, `tabs`: read window geometry and tab addresses. `tabs` is what makes Chrome show the "read your browsing history" warning.
-- `storage`: presets and settings, stored locally in the browser.
-- `system.display`: list the connected screens, used for placing windows.
+- `windows`, `tabs`: read window geometry and tab addresses and titles. `tabs` is what makes Chrome show the "read your browsing history" warning. Without it, tab addresses are not available.
+- `storage`: presets and settings, on this device.
+- `system.display`: list the connected screens and detect changes, used for placing windows and scaling.
 - `sidePanel`: the side panel UI.
-
-The extension does not send data anywhere. There is no account and no sync.
 
 ## Install (unpacked)
 
-1. Open `chrome://extensions` and enable "Developer mode".
+1. Open `chrome://extensions` and turn on "Developer mode".
 2. Click "Load unpacked" and select this folder.
 3. Pin the icon from the Extensions menu if you want it in the toolbar.
 
 ## Tests
 
 ```
-npm test                      # unit tests for the layout logic (Node 18+, no install)
+npm test                      # unit tests for layout, scaling, history, previews and the library (no install)
 npm i --no-save playwright    # once, for the browser tests
-xvfb-run -a npm run test:e2e  # end-to-end in Chromium; set CHROME_BIN to pick a binary
+xvfb-run -a npm run test:e2e  # end-to-end in Chromium; CHROME_BIN picks a binary, SCREENSHOT_DIR saves screenshots
 ```
+
+To regenerate the PNG icons from `icons/icon.svg`: `CHROME_BIN=... node tools/render-icons.js`.
 
 ## Files
 
-- `background.js`: service worker. Capture, save, apply, shortcuts. All preset writes are serialized.
-- `lib/layout.js`: pure logic (URL filtering, placement, preset validation). Covered by unit tests.
-- `popup.*`, `sidepanel.*`: UI.
-- `docs/ROAST.md`: an honest review of the first version.
-- `docs/MONETIZATION.md`: a draft plan for a paid tier.
+- `background.js`: service worker. Capture, save, apply, undo, shortcuts, and the message API.
+- `lib/layout.js`: pure logic: URL filtering, placement and scaling, preset entries and history. Covered by unit tests.
+- `lib/preview.js`: schematic SVG thumbnails of a layout.
+- `lib/ui.js`: shared UI helpers: messaging, icons, dialogs.
+- `popup.*`, `sidepanel.*`, `style.css`: the interface.
+- `library/presets.json`: built-in layouts, drawn for a 1920×1040 reference screen.
+- `icons/`: `icon.svg` is the source; the PNG sizes are generated from it.
+- `docs/ROAST.md`: review of the first version and what was fixed.
+- `docs/INSPIRATION.md`: open source projects looked at, and which ideas were taken.
+- `docs/MONETIZATION.md`: draft plan for a paid tier.
 - `docs/strategy/`: early concept notes. They are not validated and do not describe what is built.

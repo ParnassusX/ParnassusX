@@ -1,0 +1,426 @@
+{
+  "schema": 1,
+  "note": "Built-in example layouts. Coordinates are on a 1920x1040 reference screen and are scaled to the screen you apply them on.",
+  "presets": [
+    {
+      "id": "code-review",
+      "name": "Code review",
+      "category": "Engineering",
+      "description": "Pull requests on the left, reference docs on the right. Good for reviewing a change while reading the spec.",
+      "layout": {
+        "windows": [
+          {
+            "left": 0,
+            "top": 0,
+            "width": 960,
+            "height": 1040,
+            "state": "normal",
+            "focused": true,
+            "displayId": "ref",
+            "tabs": [
+              {
+                "url": "https://github.com/pulls?q=is%3Aopen+is%3Apr+review-requested%3A%40me",
+                "title": "Review requested",
+                "active": true,
+                "pinned": true
+              },
+              {
+                "url": "https://github.com/notifications",
+                "title": "Notifications",
+                "active": false,
+                "pinned": false
+              }
+            ]
+          },
+          {
+            "left": 960,
+            "top": 0,
+            "width": 960,
+            "height": 1040,
+            "state": "normal",
+            "focused": false,
+            "displayId": "ref",
+            "tabs": [
+              {
+                "url": "https://developer.mozilla.org/en-US/docs/Web/API",
+                "title": "Web APIs - MDN",
+                "active": true,
+                "pinned": false
+              },
+              {
+                "url": "https://nodejs.org/docs/latest/api/",
+                "title": "Node.js API docs",
+                "active": false,
+                "pinned": false
+              }
+            ]
+          }
+        ],
+        "displays": [
+          {
+            "id": "ref",
+            "isPrimary": true,
+            "bounds": {
+              "left": 0,
+              "top": 0,
+              "width": 1920,
+              "height": 1080
+            },
+            "workArea": {
+              "left": 0,
+              "top": 0,
+              "width": 1920,
+              "height": 1040
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "writing-with-sources",
+      "name": "Writing with sources",
+      "category": "Writing",
+      "description": "Draft in a large window on the left, with the research notes and the bibliography on the right.",
+      "layout": {
+        "windows": [
+          {
+            "left": 0,
+            "top": 0,
+            "width": 1200,
+            "height": 1040,
+            "state": "normal",
+            "focused": true,
+            "displayId": "ref",
+            "tabs": [
+              {
+                "url": "https://docs.google.com/document/u/0/",
+                "title": "Draft",
+                "active": true,
+                "pinned": true
+              }
+            ]
+          },
+          {
+            "left": 1200,
+            "top": 0,
+            "width": 720,
+            "height": 520,
+            "state": "normal",
+            "focused": false,
+            "displayId": "ref",
+            "tabs": [
+              {
+                "url": "https://scholar.google.com/",
+                "title": "Google Scholar",
+                "active": true,
+                "pinned": false
+              },
+              {
+                "url": "https://en.wikipedia.org/wiki/Main_Page",
+                "title": "Wikipedia",
+                "active": false,
+                "pinned": false
+              }
+            ]
+          },
+          {
+            "left": 1200,
+            "top": 520,
+            "width": 720,
+            "height": 520,
+            "state": "normal",
+            "focused": false,
+            "displayId": "ref",
+            "tabs": [
+              {
+                "url": "https://www.zotero.org/",
+                "title": "Zotero",
+                "active": true,
+                "pinned": false
+              }
+            ]
+          }
+        ],
+        "displays": [
+          {
+            "id": "ref",
+            "isPrimary": true,
+            "bounds": {
+              "left": 0,
+              "top": 0,
+              "width": 1920,
+              "height": 1080
+            },
+            "workArea": {
+              "left": 0,
+              "top": 0,
+              "width": 1920,
+              "height": 1040
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "daily-planning",
+      "name": "Daily planning",
+      "category": "Productivity",
+      "description": "Calendar and mail side by side, with the task list pinned in the mail window.",
+      "layout": {
+        "windows": [
+          {
+            "left": 0,
+            "top": 0,
+            "width": 960,
+            "height": 1040,
+            "state": "normal",
+            "focused": true,
+            "displayId": "ref",
+            "tabs": [
+              {
+                "url": "https://calendar.google.com/",
+                "title": "Calendar",
+                "active": true,
+                "pinned": true
+              }
+            ]
+          },
+          {
+            "left": 960,
+            "top": 0,
+            "width": 960,
+            "height": 1040,
+            "state": "normal",
+            "focused": false,
+            "displayId": "ref",
+            "tabs": [
+              {
+                "url": "https://mail.google.com/",
+                "title": "Inbox",
+                "active": true,
+                "pinned": true
+              },
+              {
+                "url": "https://todoist.com/app",
+                "title": "Tasks",
+                "active": false,
+                "pinned": false
+              }
+            ]
+          }
+        ],
+        "displays": [
+          {
+            "id": "ref",
+            "isPrimary": true,
+            "bounds": {
+              "left": 0,
+              "top": 0,
+              "width": 1920,
+              "height": 1080
+            },
+            "workArea": {
+              "left": 0,
+              "top": 0,
+              "width": 1920,
+              "height": 1040
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "presentation-prep",
+      "name": "Presentation prep",
+      "category": "Presenting",
+      "description": "Slides in a large window, speaker notes and a timer in a narrow window on the right.",
+      "layout": {
+        "windows": [
+          {
+            "left": 0,
+            "top": 0,
+            "width": 1400,
+            "height": 1040,
+            "state": "normal",
+            "focused": true,
+            "displayId": "ref",
+            "tabs": [
+              {
+                "url": "https://docs.google.com/presentation/u/0/",
+                "title": "Slides",
+                "active": true,
+                "pinned": false
+              }
+            ]
+          },
+          {
+            "left": 1400,
+            "top": 0,
+            "width": 520,
+            "height": 1040,
+            "state": "normal",
+            "focused": false,
+            "displayId": "ref",
+            "tabs": [
+              {
+                "url": "https://docs.google.com/document/u/0/",
+                "title": "Speaker notes",
+                "active": true,
+                "pinned": false
+              },
+              {
+                "url": "https://www.timeanddate.com/timer/",
+                "title": "Timer",
+                "active": false,
+                "pinned": false
+              }
+            ]
+          }
+        ],
+        "displays": [
+          {
+            "id": "ref",
+            "isPrimary": true,
+            "bounds": {
+              "left": 0,
+              "top": 0,
+              "width": 1920,
+              "height": 1080
+            },
+            "workArea": {
+              "left": 0,
+              "top": 0,
+              "width": 1920,
+              "height": 1040
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "reading-session",
+      "name": "Reading session",
+      "category": "Research",
+      "description": "A single window for long reads: the reading list pinned on the left, articles in tabs.",
+      "layout": {
+        "windows": [
+          {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1040,
+            "state": "normal",
+            "focused": true,
+            "displayId": "ref",
+            "tabs": [
+              {
+                "url": "https://news.ycombinator.com/",
+                "title": "Hacker News",
+                "active": true,
+                "pinned": true
+              },
+              {
+                "url": "https://en.wikipedia.org/wiki/Systems_theory",
+                "title": "Systems theory",
+                "active": false,
+                "pinned": false
+              },
+              {
+                "url": "https://arxiv.org/list/cs.HC/recent",
+                "title": "arXiv cs.HC",
+                "active": false,
+                "pinned": false
+              }
+            ]
+          }
+        ],
+        "displays": [
+          {
+            "id": "ref",
+            "isPrimary": true,
+            "bounds": {
+              "left": 0,
+              "top": 0,
+              "width": 1920,
+              "height": 1080
+            },
+            "workArea": {
+              "left": 0,
+              "top": 0,
+              "width": 1920,
+              "height": 1040
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "meeting-focus",
+      "name": "Meeting focus",
+      "category": "Meetings",
+      "description": "Video call on the left two-thirds, shared notes and the agenda on the right.",
+      "layout": {
+        "windows": [
+          {
+            "left": 0,
+            "top": 0,
+            "width": 1280,
+            "height": 1040,
+            "state": "normal",
+            "focused": true,
+            "displayId": "ref",
+            "tabs": [
+              {
+                "url": "https://meet.google.com/",
+                "title": "Meet",
+                "active": true,
+                "pinned": true
+              }
+            ]
+          },
+          {
+            "left": 1280,
+            "top": 0,
+            "width": 640,
+            "height": 1040,
+            "state": "normal",
+            "focused": false,
+            "displayId": "ref",
+            "tabs": [
+              {
+                "url": "https://docs.google.com/document/u/0/",
+                "title": "Meeting notes",
+                "active": true,
+                "pinned": false
+              },
+              {
+                "url": "https://calendar.google.com/",
+                "title": "Agenda",
+                "active": false,
+                "pinned": false
+              }
+            ]
+          }
+        ],
+        "displays": [
+          {
+            "id": "ref",
+            "isPrimary": true,
+            "bounds": {
+              "left": 0,
+              "top": 0,
+              "width": 1920,
+              "height": 1080
+            },
+            "workArea": {
+              "left": 0,
+              "top": 0,
+              "width": 1920,
+              "height": 1040
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
