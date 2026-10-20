@@ -11,19 +11,26 @@
     <header class="header">
       <img src="icons/icon48.png" alt="">
       <h1>Window Layout Manager</h1>
-      <span class="spacer"></span>
-      <button id="open-manager" class="btn btn-ghost btn-icon" type="button" title="Open the manager" aria-label="Open the manager in the side panel"></button>
     </header>
 
     <section class="card" aria-labelledby="save-title">
       <h2 id="save-title" class="card-title">Save this layout</h2>
-      <form id="save-form" class="stack">
+      <form id="save-form" class="stack" novalidate>
         <div class="row">
-          <input id="name" type="text" placeholder="Name, e.g. Code review" maxlength="100" aria-label="Preset name" autocomplete="off">
+          <input id="name" type="text" placeholder="Name, e.g. Code review" maxlength="100" aria-label="Preset name" aria-describedby="name-error" autocomplete="off">
           <button class="btn btn-primary" type="submit">Save</button>
         </div>
-        <p class="muted">Captures every normal window with web tabs, on every screen.</p>
+        <p id="name-error" class="field-error" role="alert"></p>
+        <p class="muted small">Captures every normal window with web tabs, on every screen.</p>
       </form>
+    </section>
+
+    <section id="change-card" class="card hidden" aria-labelledby="change-title">
+      <h2 id="change-title" class="card-title">Last change</h2>
+      <div class="row">
+        <p id="change-text" class="muted" style="flex:1"></p>
+        <button id="change-undo" class="btn" type="button"></button>
+      </div>
     </section>
 
     <section id="undo-card" class="card hidden" aria-labelledby="undo-title">
@@ -35,11 +42,15 @@
     </section>
 
     <section class="card" aria-labelledby="quick-title">
-      <h2 id="quick-title" class="card-title">Quick apply</h2>
+      <div class="row card-head">
+        <h2 id="quick-title" class="card-title">Presets</h2>
+        <span id="count" class="muted small"></span>
+        <button id="open-manager" class="btn btn-ghost btn-small" type="button" title="Rename, update, delete and search presets in the side panel"></button>
+      </div>
       <div id="quick" class="quick"></div>
     </section>
 
-    <p class="muted small">Shortcuts Ctrl+Shift+1, 2 and 3 apply your first three presets.</p>
+    <p class="muted small">Ctrl+Shift+1, 2 and 3 apply the presets assigned to those keys.</p>
   </main>
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 

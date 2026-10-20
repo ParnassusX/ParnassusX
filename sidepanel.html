@@ -21,13 +21,14 @@
     </nav>
 
     <section id="panel-presets" class="tab-panel stack" role="tabpanel" aria-labelledby="tab-presets">
-      <div id="undo-banner" class="banner hidden"></div>
-      <div id="screens-banner" class="banner hidden"></div>
+      <div id="change-banner" class="banner hidden" role="status"></div>
+      <div id="undo-banner" class="banner hidden" role="status"></div>
+      <div id="screens-banner" class="banner hidden" role="status"></div>
       <div class="row">
-        <input id="search" type="search" placeholder="Search presets" aria-label="Search presets">
+        <input id="search" type="search" placeholder="Search names, tabs and URLs" aria-label="Search presets">
         <button id="capture" class="btn btn-primary" type="button"></button>
       </div>
-      <div id="preset-list" class="preset-list" aria-live="polite"></div>
+      <div id="preset-list" class="preset-list"></div>
     </section>
 
     <section id="panel-library" class="tab-panel stack" role="tabpanel" aria-labelledby="tab-library" hidden>
@@ -40,7 +41,7 @@
         <h2 class="card-title">When applying a layout</h2>
         <div class="stack" role="radiogroup" aria-label="When applying a layout">
           <label class="choice"><input type="radio" name="behavior" value="close_all">
-            <span><strong>Close other windows first</strong><small>Closes every other window. Use Undo if it was a mistake.</small></span></label>
+            <span><strong>Close other windows first</strong><small>Closes every other window. The window you are using stays open. Undo brings the closed ones back.</small></span></label>
           <label class="choice"><input type="radio" name="behavior" value="smart_close_pinned">
             <span><strong>Keep windows with pinned tabs</strong><small>Closes the others, but leaves any window that has a pinned tab.</small></span></label>
           <label class="choice"><input type="radio" name="behavior" value="merge">
@@ -70,8 +71,9 @@
 
       <div class="card">
         <h2 class="card-title">Keyboard shortcuts</h2>
-        <p class="muted">Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>1</kbd>, <kbd>2</kbd> or <kbd>3</kbd> (<kbd>Command</kbd> on Mac) to apply your first three presets, in alphabetical order.</p>
-        <button id="shortcuts" class="btn btn-block" type="button">Change shortcuts in Chrome</button>
+        <p class="muted">Ctrl+Shift+1, 2 and 3 (Command on Mac) apply the preset assigned to each slot. Assign slots from a preset's menu.</p>
+        <ul id="slot-list" class="slot-list"></ul>
+        <button id="shortcuts" class="btn btn-block" type="button">Change key bindings in Chrome</button>
       </div>
     </section>
 
@@ -83,7 +85,7 @@
       </div>
       <div class="card stack">
         <h2 class="card-title">Import</h2>
-        <p class="muted">Presets with the same name are replaced. Tabs that are not web pages (file:, chrome:) are dropped.</p>
+        <p class="muted">Presets with the same name are replaced. You can undo the import from the Presets tab. Tabs that are not web pages are dropped.</p>
         <label class="sr-only" for="import-file">Choose a JSON file</label>
         <input id="import-file" type="file" accept="application/json,.json">
         <button id="import" class="btn btn-block" type="button"></button>

@@ -1,22 +1,40 @@
 importScripts('lib/layout.js');
 
-// Every write to the presets key goes through this queue. Without it, two
-// messages that arrive together both read the old map and the last write
-// wins, which silently drops the other preset (verified in docs/ROAST.md).
-let presetQueue = Promise.resolve();
+const UNDO_LIMIT = 10;
 
+// Every read-modify-write of presets, undo log and shortcut slots goes through
+// this queue. Without it, messages that arrive together overwrite each other
+// (verified in docs/ROAST.md, round 1).
+let storeQueue = Promise.resolve();
+
+function serialized(task) {
+  const run = storeQueue.then(task);
+  storeQueue = run.catch(() => {});
+  return run;
+}
+
+// Runs `mutate` on the presets. When the mutation succeeds and returns an
+// undoLabel, a snapshot of the previous presets is pushed on the undo log.
 function updatePresetStore(mutate) {
-  const run = presetQueue.then(async () => {
-    const data = await chrome.storage.local.get('presets');
+  return serialized(async () => {
+    const data = await chrome.storage.local.get(['presets', 'undoLog']);
     const presets = data.presets || {};
+    const before = JSON.parse(JSON.stringify(presets));
     const result = mutate(presets, Date.now());
     if (result.ok) {
       await chrome.storage.local.set({ presets });
+      if (result.undoLabel) {
+        const log = Array.isArray(data.undoLog) ? data.undoLog : [];
+        const next = [{ label: result.undoLabel, at: Date.now(), presets: before }, ...log].slice(0, UNDO_LIMIT);
+        await chrome.storage.local.set({ undoLog: next });
+      }
     }
     return result;
   });
-  presetQueue = run.catch(() => {});
-  return run;
+}
+
+function undoable(label, result) {
+  return result.ok ? { ...result, undoLabel: label } : result;
 }
 
 function asResponse(result) {
@@ -25,7 +43,7 @@ function asResponse(result) {
 
 // ---- Capture ------------------------------------------------------------
 
-async function captureCurrentWindowLayout() {
+async function captureCurrentWindowLayout(excludeWindowId) {
   try {
     const windows = await chrome.windows.getAll({ populate: true, windowTypes: ['normal'] });
     const displays = await chrome.system.display.getInfo();
@@ -37,7 +55,7 @@ async function captureCurrentWindowLayout() {
     }));
 
     const layoutWindows = windows
-      .filter(win => win.state !== 'minimized')
+      .filter(win => win.state !== 'minimized' && win.id !== excludeWindowId)
       .map(win => ({
         left: win.left,
         top: win.top,
@@ -65,8 +83,7 @@ async function captureCurrentWindowLayout() {
 
 async function readSettings() {
   try {
-    const items = await chrome.storage.sync.get({ presetBehavior: 'close_all', fitToScreens: true });
-    return items;
+    return await chrome.storage.sync.get({ presetBehavior: 'close_all', fitToScreens: true });
   } catch (error) {
     console.error('readSettings failed, using defaults:', error.message);
     return { presetBehavior: 'close_all', fitToScreens: true };
@@ -86,6 +103,11 @@ async function getPresets() {
   return normalized;
 }
 
+async function getShortcutSlots() {
+  const data = await chrome.storage.local.get('shortcutSlots');
+  return data.shortcutSlots || {};
+}
+
 async function getDisplays() {
   const displays = await chrome.system.display.getInfo();
   return {
@@ -96,10 +118,13 @@ async function getDisplays() {
 
 // ---- Applying layouts ---------------------------------------------------
 
-async function closeWindowsForBehavior(presetBehavior) {
+// keepWindowId is the window the request came from (the side panel's window,
+// or the last focused window for the popup). It stays open, so the UI that
+// triggered the change does not disappear with the windows it closes.
+async function closeWindowsForBehavior(presetBehavior, keepWindowId) {
   const currentWindows = await chrome.windows.getAll({ populate: false, windowTypes: ['normal'] });
   for (const win of currentWindows) {
-    if (!win.id) continue;
+    if (!win.id || win.id === keepWindowId) continue;
     if (presetBehavior === 'smart_close_pinned') {
       const tabsInWindow = await chrome.tabs.query({ windowId: win.id });
       if (tabsInWindow.some(tab => tab.pinned)) continue;
@@ -108,15 +133,16 @@ async function closeWindowsForBehavior(presetBehavior) {
   }
 }
 
-// Undo support: before windows are closed, the current layout is stored so the
-// last apply can be reverted with one click.
-async function rememberLayoutBeforeClosing() {
-  const captured = await captureCurrentWindowLayout();
+// Undo support for applying: before windows are closed, the current layout is
+// stored so the last apply can be reverted with one click.
+async function rememberLayoutBeforeClosing(keepWindowId) {
+  const captured = await captureCurrentWindowLayout(keepWindowId);
   if (captured.error) return;
-  await chrome.storage.local.set({ lastSession: { savedAt: Date.now(), layout: captured } });
+  const windows = captured.windows.filter(w => w.tabs.length > 0);
+  await chrome.storage.local.set({ lastSession: { savedAt: Date.now(), layout: { ...captured, windows } } });
 }
 
-async function restoreLayout(layout, savedDisplays, { presetBehavior, fit }) {
+async function restoreLayout(layout, savedDisplays, { presetBehavior, fit, keepWindowId }) {
   let currentDisplays;
   try {
     currentDisplays = await chrome.system.display.getInfo();
@@ -129,8 +155,8 @@ async function restoreLayout(layout, savedDisplays, { presetBehavior, fit }) {
 
   if (presetBehavior === 'close_all' || presetBehavior === 'smart_close_pinned') {
     try {
-      await rememberLayoutBeforeClosing();
-      await closeWindowsForBehavior(presetBehavior);
+      await rememberLayoutBeforeClosing(keepWindowId);
+      await closeWindowsForBehavior(presetBehavior, keepWindowId);
     } catch (error) {
       console.error('restoreLayout: error while closing windows:', error.message);
     }
@@ -192,7 +218,7 @@ async function restoreLayout(layout, savedDisplays, { presetBehavior, fit }) {
   return { success: true };
 }
 
-async function applyPreset(presetName) {
+async function applyPreset(presetName, keepWindowId) {
   let allPresets;
   try {
     allPresets = await getPresets();
@@ -214,19 +240,26 @@ async function applyPreset(presetName) {
   const result = await restoreLayout(layout, layout.displays, {
     presetBehavior: settings.presetBehavior,
     fit: settings.fitToScreens,
+    keepWindowId,
   });
   if (!result.success) return { status: 'error', success: false, message: result.message };
+
+  updatePresetStore(p => WLM.markUsed(p, presetName, Date.now())).catch(() => {});
   return { status: 'success', success: true, message: `Preset "${presetName}" applied.` };
 }
 
-async function undoLastApply() {
+async function undoLastApply(keepWindowId) {
   const data = await chrome.storage.local.get('lastSession');
   const session = data.lastSession;
   if (!session || !session.layout) {
     return { status: 'error', success: false, message: 'Nothing to undo.' };
   }
   // Put the windows back without closing anything else.
-  const result = await restoreLayout(session.layout, session.layout.displays, { presetBehavior: 'merge', fit: true });
+  const result = await restoreLayout(session.layout, session.layout.displays, {
+    presetBehavior: 'merge',
+    fit: true,
+    keepWindowId,
+  });
   if (!result.success) return { status: 'error', success: false, message: result.message };
   await chrome.storage.local.remove('lastSession');
   return { status: 'success', success: true, message: 'Previous layout restored.' };
@@ -236,10 +269,49 @@ async function getLastSession() {
   const data = await chrome.storage.local.get('lastSession');
   const session = data.lastSession;
   if (!session || !session.layout) return { status: 'success', session: null };
-  return {
-    status: 'success',
-    session: { savedAt: session.savedAt, windows: session.layout.windows.length },
-  };
+  return { status: 'success', session: { savedAt: session.savedAt, windows: session.layout.windows.length } };
+}
+
+// ---- Change history (undo for preset edits) -----------------------------
+
+async function getUndoInfo() {
+  const data = await chrome.storage.local.get('undoLog');
+  const top = (data.undoLog || [])[0];
+  return { status: 'success', undo: top ? { label: top.label, at: top.at } : null };
+}
+
+function undoPresetChange() {
+  return serialized(async () => {
+    const data = await chrome.storage.local.get('undoLog');
+    const log = Array.isArray(data.undoLog) ? data.undoLog : [];
+    if (log.length === 0) return { status: 'error', success: false, message: 'Nothing to undo.' };
+    const [top, ...rest] = log;
+    await chrome.storage.local.set({ presets: top.presets, undoLog: rest });
+    return { status: 'success', success: true, message: `Undone: ${top.label}.` };
+  });
+}
+
+// ---- Shortcut slots -----------------------------------------------------
+
+function setShortcutSlot(index, presetName) {
+  return serialized(async () => {
+    const data = await chrome.storage.local.get(['presets', 'shortcutSlots']);
+    const presets = data.presets || {};
+    if (presetName !== null && !Object.prototype.hasOwnProperty.call(presets, presetName)) {
+      return { status: 'error', success: false, message: `Preset "${presetName}" not found.` };
+    }
+    const slots = WLM.assignSlot(data.shortcutSlots || {}, index, presetName);
+    await chrome.storage.local.set({ shortcutSlots: slots });
+    return { status: 'success', success: true, message: presetName ? `Shortcut ${index} now applies "${presetName}".` : `Shortcut ${index} cleared.` };
+  });
+}
+
+async function runShortcut(index) {
+  const presets = await getPresets();
+  const slots = await getShortcutSlots();
+  const target = WLM.shortcutTargets(presets, slots)[index];
+  if (!target) return { status: 'error', success: false, message: 'No preset is assigned to this shortcut.' };
+  return applyPreset(target);
 }
 
 // ---- Message routing ----------------------------------------------------
@@ -252,40 +324,64 @@ function dispatch(request) {
         return { status: 'success', layout };
       });
     case 'saveCurrentLayout':
-      // Capture and save in one step, so the saved layout is the one on screen now.
       return captureCurrentWindowLayout().then(layout => {
         if (layout.error) return { status: 'error', success: false, message: layout.error };
-        return updatePresetStore((p, now) => WLM.addPreset(p, request.presetName, layout, now)).then(asResponse);
+        return updatePresetStore((p, now) => {
+          const name = WLM.validatePresetName(request.presetName);
+          return undoable(`Saved "${name}"`, WLM.addPreset(p, request.presetName, layout, now));
+        }).then(asResponse);
       });
     case 'updateCurrentLayout':
       return captureCurrentWindowLayout().then(layout => {
         if (layout.error) return { status: 'error', success: false, message: layout.error };
-        return updatePresetStore((p, now) => WLM.updatePreset(p, request.presetName, layout, now)).then(asResponse);
+        return updatePresetStore((p, now) =>
+          undoable(`Updated "${request.presetName}"`, WLM.updatePreset(p, request.presetName, layout, now))).then(asResponse);
       });
     case 'savePreset':
-      return updatePresetStore((p, now) => WLM.addPreset(p, request.presetName, request.layoutData, now)).then(asResponse);
+      return updatePresetStore((p, now) =>
+        undoable(`Saved "${request.presetName}"`, WLM.addPreset(p, request.presetName, request.layoutData, now))).then(asResponse);
     case 'updatePreset':
-      return updatePresetStore((p, now) => WLM.updatePreset(p, request.presetName, request.layoutData, now)).then(asResponse);
+      return updatePresetStore((p, now) =>
+        undoable(`Updated "${request.presetName}"`, WLM.updatePreset(p, request.presetName, request.layoutData, now))).then(asResponse);
     case 'renamePreset':
-      return updatePresetStore((p, now) => WLM.renamePreset(p, request.presetName, request.newName, now)).then(asResponse);
+      return updatePresetStore((p, now) =>
+        undoable(`Renamed "${request.presetName}"`, WLM.renamePreset(p, request.presetName, request.newName, now)))
+        .then(async (result) => {
+          if (result.ok) {
+            const data = await chrome.storage.local.get('shortcutSlots');
+            await chrome.storage.local.set({ shortcutSlots: WLM.renameInSlots(data.shortcutSlots || {}, request.presetName, request.newName.trim()) });
+          }
+          return asResponse(result);
+        });
     case 'duplicatePreset':
-      return updatePresetStore((p, now) => WLM.duplicatePreset(p, request.presetName, now)).then(asResponse);
+      return updatePresetStore((p, now) => undoable(`Duplicated "${request.presetName}"`, WLM.duplicatePreset(p, request.presetName, now))).then(asResponse);
     case 'revertPreset':
-      return updatePresetStore((p, now) => WLM.revertPreset(p, request.presetName, now)).then(asResponse);
+      return updatePresetStore((p, now) =>
+        undoable(`Restored an earlier version of "${request.presetName}"`, WLM.revertPreset(p, request.presetName, now))).then(asResponse);
+    case 'removeTab':
+      return updatePresetStore((p, now) =>
+        undoable(`Removed a tab from "${request.presetName}"`, WLM.removeTab(p, request.presetName, request.windowIndex, request.tabIndex, now))).then(asResponse);
     case 'installPreset':
-      return updatePresetStore((p, now) => WLM.installPreset(p, request.presetName, request.layoutData, now)).then(asResponse);
+      return updatePresetStore((p, now) => {
+        const result = WLM.installPreset(p, request.presetName, request.layoutData, now);
+        return result.ok ? undoable(`Added "${result.name}" from the library`, result) : result;
+      }).then(asResponse);
     case 'deletePreset':
       return updatePresetStore((p) => {
         if (!Object.prototype.hasOwnProperty.call(p, request.presetName)) {
           return { ok: false, message: `Preset "${request.presetName}" not found.` };
         }
         delete p[request.presetName];
-        return { ok: true, message: `Preset "${request.presetName}" deleted.` };
+        return undoable(`Deleted "${request.presetName}"`, { ok: true, message: `Preset "${request.presetName}" deleted.` });
       }).then(asResponse);
     case 'getPresets':
       return getPresets().then(presets => ({ status: 'success', presets }));
     case 'importPresets':
-      return updatePresetStore((p, now) => WLM.mergeImport(p, request.data, now)).then(result => {
+      return updatePresetStore((p, now) => {
+        const result = WLM.mergeImport(p, request.data, now);
+        if (!result.ok) return result;
+        return undoable(`Imported ${result.imported} preset(s)`, { ...result, ok: true });
+      }).then(result => {
         if (!result.ok) return { success: false, message: 'Invalid import data: expected a JSON object of presets.' };
         return {
           success: true,
@@ -294,11 +390,19 @@ function dispatch(request) {
         };
       });
     case 'applyPreset':
-      return applyPreset(request.presetName);
+      return applyPreset(request.presetName, request.keepWindowId);
     case 'undoLastApply':
-      return undoLastApply();
+      return undoLastApply(request.keepWindowId);
     case 'getLastSession':
       return getLastSession();
+    case 'undoPresetChange':
+      return undoPresetChange();
+    case 'getUndoInfo':
+      return getUndoInfo();
+    case 'getShortcutSlots':
+      return getShortcutSlots().then(slots => ({ status: 'success', slots }));
+    case 'setShortcutSlot':
+      return setShortcutSlot(request.index, request.presetName);
     case 'getDisplays':
       return getDisplays().then(info => ({ status: 'success', ...info }));
     default:
@@ -328,18 +432,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   return true;
 });
 
-// Keyboard shortcuts apply the first three presets in alphabetical order.
+// Keyboard shortcuts: the slot's preset, or alphabetical order when unassigned.
 const SHORTCUT_INDEX = { 'apply-preset-1': 0, 'apply-preset-2': 1, 'apply-preset-3': 2 };
 
-chrome.commands.onCommand.addListener(async (command) => {
+chrome.commands.onCommand.addListener((command) => {
   const index = SHORTCUT_INDEX[command];
   if (index === undefined) return;
-  try {
-    const names = Object.keys(await getPresets()).sort();
-    if (index >= names.length) return;
-    const result = await applyPreset(names[index]);
+  runShortcut(index).then(result => {
     if (!result.success) console.error(`Shortcut failed: ${result.message}`);
-  } catch (error) {
-    console.error(`Error handling command "${command}":`, error.message);
-  }
+  }).catch(error => console.error(`Error handling command "${command}":`, error.message));
 });

@@ -23,12 +23,14 @@ Status: early version. Tested in Chromium on a single display. Multi-monitor pla
 - Positions are always kept inside the visible work area.
 - When screens change while the side panel is open, the list refreshes and a banner explains which presets are scaled.
 
-**Manage.** Search, rename, duplicate, delete (with confirmation), update, export and import JSON. Light, dark and system themes.
+**Undo for every change.** Delete, rename, duplicate, update, restore a version, remove a tab, import and library additions can all be undone. A banner in the side panel names the last change and has an Undo button. The last ten changes are kept.
 
-**Shortcuts.** Ctrl+Shift+1, 2 and 3 (Command on Mac) apply the first three presets alphabetically. Change them in `chrome://extensions/shortcuts`.
+**Manage.** Search across names, tab titles and URLs. Rename, duplicate, update, restore an earlier version, remove a single tab from a preset, delete. Lists are ordered by most recent use. Light, dark and system themes.
+
+**Shortcuts.** Ctrl+Shift+1, 2 and 3 (Command on Mac) apply the preset in each slot. Assign a slot from a preset's ⋯ menu; a badge shows it on the card. Slots without a preset fall back to alphabetical order. Change the key combinations in `chrome://extensions/shortcuts`.
 
 **Apply behaviour** (Settings tab):
-- *Close other windows first* (default). A shortcut closes your other windows without asking; Undo brings them back.
+- *Close other windows first* (default). The window you are using stays open. Undo brings the closed windows back, one apply at a time: only the most recent apply can be undone.
 - *Keep windows with pinned tabs*: closes the others, but leaves windows that have a pinned tab.
 - *Add alongside*: opens the layout without closing anything. Windows can end up duplicated.
 
@@ -56,9 +58,11 @@ Status: early version. Tested in Chromium on a single display. Multi-monitor pla
 ## Tests
 
 ```
-npm test                      # unit tests for layout, scaling, history, previews and the library (no install)
+npm test                      # unit tests: layout, scaling, history, search, slots, previews, library (no install)
 npm i --no-save playwright    # once, for the browser tests
-xvfb-run -a npm run test:e2e  # end-to-end in Chromium; CHROME_BIN picks a binary, SCREENSHOT_DIR saves screenshots
+xvfb-run -a npm run test:e2e     # message-level checks in Chromium
+xvfb-run -a npm run test:e2e:ui  # click-driven checks: every button and dialog path
+# CHROME_BIN picks a binary; SCREENSHOT_DIR saves screenshots for review
 ```
 
 To regenerate the PNG icons from `icons/icon.svg`: `CHROME_BIN=... node tools/render-icons.js`.
@@ -70,9 +74,11 @@ To regenerate the PNG icons from `icons/icon.svg`: `CHROME_BIN=... node tools/re
 - `lib/preview.js`: schematic SVG thumbnails of a layout.
 - `lib/ui.js`: shared UI helpers: messaging, icons, dialogs.
 - `popup.*`, `sidepanel.*`, `style.css`: the interface.
+- `lib/ui.js`: shared UI helpers: messages, icons, dialogs with inline validation, toasts with actions, menus.
 - `library/presets.json`: built-in layouts, drawn for a 1920×1040 reference screen.
 - `icons/`: `icon.svg` is the source; the PNG sizes are generated from it.
 - `docs/ROAST.md`: review of the first version and what was fixed.
+- `docs/ROAST-UX.md`: review of the interface and flows, with what was verified and what is still open.
 - `docs/INSPIRATION.md`: open source projects looked at, and which ideas were taken.
 - `docs/MONETIZATION.md`: draft plan for a paid tier.
 - `docs/strategy/`: early concept notes. They are not validated and do not describe what is built.
