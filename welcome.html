@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Welcome to Window Layout Manager</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="welcome">
+  <main class="welcome-page">
+    <header class="hero">
+      <img class="hero-mark" src="icons/icon128.png" alt="" width="72" height="72">
+      <h1>Your windows, exactly how you left them.</h1>
+      <p class="hero-sub">Save how your browser is arranged, and bring it back in one click. Wherever your screens are.</p>
+    </header>
+
+    <ol class="steps">
+      <li class="step"><span class="step-n" aria-hidden="true">1</span><div><strong>Arrange</strong><p>Open the windows and tabs the way you work.</p></div></li>
+      <li class="step"><span class="step-n" aria-hidden="true">2</span><div><strong>Save</strong><p>Click the toolbar icon, name the layout, press Save.</p></div></li>
+      <li class="step"><span class="step-n" aria-hidden="true">3</span><div><strong>Apply</strong><p>One click, or Ctrl+Shift+1, 2 or 3. Undo is always there.</p></div></li>
+    </ol>
+
+    <section class="card welcome-card">
+      <h2 class="card-title">One choice</h2>
+      <p class="muted">When you apply a layout, what should happen to the windows that are already open?</p>
+      <div id="behavior-choices" class="stack" role="radiogroup" aria-label="When applying a layout"></div>
+      <p class="muted small">You can change this later in Settings. Nothing is closed until you have chosen.</p>
+    </section>
+
+    <section class="welcome-pin">
+      <strong>Pin the icon</strong>
+      <p class="muted">Click the puzzle piece in Chrome's toolbar, then the pin next to Window Layout Manager. It stays one click away.</p>
+    </section>
+
+    <div class="welcome-actions">
+      <button id="finish" class="btn btn-primary btn-large" type="button">Save my choice</button>
+      <button id="library" class="btn btn-large" type="button">Start from a ready-made layout</button>
+    </div>
+    <p id="welcome-status" class="muted" role="status"></p>
+
+    <footer class="welcome-foot muted small">Everything stays on this device. No account, no tracking.</footer>
+  </main>
+
+  <script src="lib/layout.js"></script>
+  <script src="lib/preview.js"></script>
+  <script src="lib/ui.js"></script>
+  <script src="welcome.js"></script>
+</body>
+</html>

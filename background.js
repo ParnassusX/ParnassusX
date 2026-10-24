@@ -1,6 +1,9 @@
 importScripts('lib/layout.js');
 
 const UNDO_LIMIT = 10;
+// Layouts with more tabs than this load only their active tab per window; the
+// other tabs are created but unloaded, and load when the user opens them.
+const LAZY_TAB_THRESHOLD = 10;
 
 // Every read-modify-write of presets, undo log and shortcut slots goes through
 // this queue. Without it, messages that arrive together overwrite each other
@@ -99,13 +102,21 @@ async function captureCurrentWindowLayout(excludeWindowId) {
 
 // ---- Settings -----------------------------------------------------------
 
+const DEFAULT_SETTINGS = { presetBehavior: 'close_all', fitToScreens: true, lazyTabs: true, behaviorConfirmed: false };
+
+// Until the user has chosen how layouts are applied, nothing is ever closed:
+// the layout opens alongside the current windows. The choice is asked for on
+// the first apply and on the welcome page.
 async function readSettings() {
+  let settings;
   try {
-    return await chrome.storage.sync.get({ presetBehavior: 'close_all', fitToScreens: true });
+    settings = await chrome.storage.sync.get(DEFAULT_SETTINGS);
   } catch (error) {
     console.error('readSettings failed, using defaults:', error.message);
-    return { presetBehavior: 'close_all', fitToScreens: true };
+    settings = { ...DEFAULT_SETTINGS };
   }
+  if (settings.behaviorConfirmed !== true) settings.presetBehavior = 'merge';
+  return settings;
 }
 
 // ---- Presets ------------------------------------------------------------
@@ -160,7 +171,18 @@ async function rememberLayoutBeforeClosing(keepWindowId) {
   await chrome.storage.local.set({ lastSession: { savedAt: Date.now(), layout: { ...captured, windows } } });
 }
 
-async function restoreLayout(layout, savedDisplays, { presetBehavior, fit, keepWindowId }) {
+// Unloads every tab of a window except the one in front, so a layout with many
+// tabs does not load them all at once. Tabs keep their address and title.
+async function unloadBackgroundTabs(windowId) {
+  const tabsInWindow = await chrome.tabs.query({ windowId });
+  for (const tab of tabsInWindow) {
+    if (!tab.active) await chrome.tabs.discard(tab.id).catch(() => {});
+  }
+}
+
+async function restoreLayout(layout, savedDisplays, { presetBehavior, fit, keepWindowId, lazyTabs = false }) {
+  const totalTabs = layout.windows.reduce((n, w) => n + w.tabs.length, 0);
+  const unloadTabs = lazyTabs && totalTabs > LAZY_TAB_THRESHOLD;
   let currentDisplays;
   try {
     currentDisplays = await chrome.system.display.getInfo();
@@ -221,6 +243,10 @@ async function restoreLayout(layout, savedDisplays, { presetBehavior, fit, keepW
         }
       }
 
+      if (unloadTabs && windowData.tabs.length > 1) {
+        await unloadBackgroundTabs(newWindow.id);
+      }
+
       if ((plan.state === 'maximized' || plan.state === 'fullscreen') && plan.sameDisplay) {
         await chrome.windows.update(newWindow.id, { state: plan.state })
           .catch(e => console.warn('state update failed:', e.message));
@@ -258,6 +284,7 @@ async function applyPreset(presetName, keepWindowId) {
   const result = await restoreLayout(layout, layout.displays, {
     presetBehavior: settings.presetBehavior,
     fit: settings.fitToScreens,
+    lazyTabs: settings.lazyTabs,
     keepWindowId,
   });
   if (!result.success) return { status: 'error', success: false, message: result.message };
@@ -428,10 +455,17 @@ function dispatch(request) {
   }
 }
 
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.sidePanel
-    .setPanelBehavior({ openPanelOnActionClick: true })
-    .catch((error) => console.error('Error setting side panel behavior:', error));
+// The toolbar icon opens the popup (save and apply in two clicks); the side
+// panel is for managing presets and is opened from the popup. Set on every
+// start so the behaviour never depends on when onInstalled last ran.
+chrome.sidePanel
+  .setPanelBehavior({ openPanelOnActionClick: false })
+  .catch((error) => console.error('Error setting side panel behavior:', error));
+
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === 'install') {
+    chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
+  }
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {

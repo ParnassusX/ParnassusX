@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const screensBanner = document.getElementById('screens-banner');
   const libraryList = document.getElementById('library-list');
   const fitToggle = document.getElementById('fit');
+  const lazyToggle = document.getElementById('lazy');
   const themeSelect = document.getElementById('theme');
   const slotList = document.getElementById('slot-list');
 
@@ -236,6 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function applyPreset(name) {
+    if (!(await UI.ensureBehaviorChosen())) return;
     const response = await send({ action: 'applyPreset', presetName: name, keepWindowId: await currentWindowId() });
     toast(response.status === 'success' ? `Applied "${name}".` : response.message, response.status === 'success' ? 'success' : 'error');
     refreshApplyBanner();
@@ -354,18 +356,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function loadSettings() {
-    const items = await chrome.storage.sync.get({ presetBehavior: 'close_all', fitToScreens: true, theme: 'system' });
+    const items = await chrome.storage.sync.get({ presetBehavior: 'close_all', fitToScreens: true, lazyTabs: true, theme: 'system' });
     const radio = document.querySelector(`input[name="behavior"][value="${items.presetBehavior}"]`) || document.querySelector('input[name="behavior"][value="close_all"]');
     radio.checked = true;
     fitToggle.checked = items.fitToScreens !== false;
+    lazyToggle.checked = items.lazyTabs !== false;
     themeSelect.value = items.theme;
     applyTheme(items.theme);
   }
 
   // Settings apply at once; the control itself shows the new state, so no toast.
   document.querySelectorAll('input[name="behavior"]').forEach(radio => radio.addEventListener('change', () => {
-    chrome.storage.sync.set({ presetBehavior: radio.value });
+    chrome.storage.sync.set({ presetBehavior: radio.value, behaviorConfirmed: true });
   }));
+  lazyToggle.addEventListener('change', () => chrome.storage.sync.set({ lazyTabs: lazyToggle.checked }));
   fitToggle.addEventListener('change', () => chrome.storage.sync.set({ fitToScreens: fitToggle.checked }));
   themeSelect.addEventListener('change', () => {
     chrome.storage.sync.set({ theme: themeSelect.value });

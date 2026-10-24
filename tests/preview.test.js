@@ -23,3 +23,27 @@ test('preview ignores windows without geometry and never injects markup', () => 
   assert.equal((svg.match(/class="win/g) || []).length, 1);
   assert.equal(svg.includes('<script'), false);
 });
+
+test('each window is coloured by its site and carries the site initial', () => {
+  global.WLM = require('../lib/layout.js');
+  const svg = PREVIEW.renderPreviewSvg({
+    displays: [{ id: '1', isPrimary: true, workArea: { left: 0, top: 0, width: 1920, height: 1040 } }],
+    windows: [
+      { left: 0, top: 0, width: 960, height: 1040, tabs: [{ url: 'https://github.com/x' }] },
+      { left: 960, top: 0, width: 960, height: 1040, tabs: [{ url: 'https://docs.google.com/d' }] },
+    ],
+  });
+  assert.match(svg, />G<\/text>/);
+  assert.equal((svg.match(/win-letter/g) || []).length, 2);
+  assert.equal(PREVIEW.hueFor('Github'), PREVIEW.hueFor('Github'), 'stable per site');
+});
+
+test('a site name is escaped before it reaches the markup', () => {
+  global.WLM = { windowSite: () => '<script>alert(1)</script>' };
+  const svg = PREVIEW.renderPreviewSvg({
+    displays: [],
+    windows: [{ left: 0, top: 0, width: 400, height: 300, tabs: [{ url: 'https://x.test/' }] }],
+  });
+  assert.equal(svg.includes('<script'), false);
+  global.WLM = require('../lib/layout.js');
+});

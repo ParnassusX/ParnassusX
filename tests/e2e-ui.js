@@ -37,7 +37,7 @@ async function main() {
       await wait(800);
       return ctx.pages().find(p => p.url() === `chrome-extension://${extId}/${file}`);
     };
-    const popup = await openHost('popup.html', 380, 600);
+    let popup = await openHost('popup.html', 380, 600);
     const panel = await openHost('sidepanel.html', 400, 780);
     const errors = [];
     for (const p of [popup, panel]) p.on('pageerror', e => errors.push(String(e)));
@@ -45,6 +45,7 @@ async function main() {
     const storedNames = () => sw.evaluate(() => chrome.storage.local.get('presets')).then(d => Object.keys(d.presets || {}).sort());
 
     await sw.evaluate(() => chrome.storage.local.clear());
+    await sw.evaluate(() => chrome.storage.sync.set({ presetBehavior: 'close_all', behaviorConfirmed: true }));
     await sw.evaluate(async (b) => {
       const w = await chrome.windows.create({ url: b + '/a' });
       await chrome.tabs.update(w.tabs[0].id, { pinned: true });
@@ -187,6 +188,58 @@ async function main() {
     const toastAfterSetting = await panel.locator('#toast').evaluate(el => el.className);
     check('changing a setting does not show a toast', /hidden/.test(toastAfterSetting), toastAfterSetting);
     await panel.click('label:has(input[value="close_all"])'); await wait(200);
+
+    // ---- Smart popup: a name suggestion and a match with the saved preset ----
+    await sw.evaluate(async (b) => { await chrome.tabs.create({ url: b + '/fresh-tab' }); }, base);
+    await wait(500);
+    await popup.reload(); await wait(900);
+    const matchText = (await popup.locator('#match-text').textContent()) || '';
+    check('popup notices the windows drifted from a saved preset', /Looks like/.test(matchText) && /1 new/.test(matchText), matchText);
+    check('popup offers to update that preset', await popup.locator('#match-update').isVisible());
+    await popup.locator('#match-update').click(); await wait(700);
+    check('updating from the popup matches again afterwards', /match/.test((await popup.locator('#match-text').textContent()) || ''), await popup.locator('#match-text').textContent());
+    await sw.evaluate(() => chrome.storage.local.set({ presets: {} }));
+    await popup.reload(); await wait(900);
+    const chip = (await popup.locator('#suggest').textContent()) || '';
+    check('popup suggests a name from the open sites', /Name it "127\.0\.0\.1"/.test(chip), chip);
+    await popup.locator('#suggest').click();
+    check('the suggestion fills the name field', (await popup.inputValue('#name')) === '127.0.0.1');
+    await popup.fill('#name', '');
+
+    // ---- First apply asks how to treat open windows ----
+    await send(popup, { action: 'saveCurrentLayout', presetName: 'Alpha' });
+    await sw.evaluate(() => chrome.storage.sync.clear());
+    await popup.reload(); await wait(700);
+    await popup.locator('#quick .quick-item button:has-text("Apply")').first().click(); await wait(500);
+    check('the first apply asks how layouts should be applied', (await popup.locator('dialog[open] input[type=radio]').count()) === 3);
+    await popup.locator('dialog[open] input[value="merge"]').check();
+    await popup.locator('dialog[open] .btn-primary').click(); await wait(900);
+    const choice = await sw.evaluate(() => chrome.storage.sync.get(['presetBehavior', 'behaviorConfirmed']));
+    check('the choice is saved and confirmed', choice.presetBehavior === 'merge' && choice.behaviorConfirmed === true, choice);
+    await sw.evaluate(() => chrome.storage.sync.set({ presetBehavior: 'close_all', behaviorConfirmed: true }));
+    // The popup closes itself after a successful apply, as it should. Open a new one.
+    check('the popup closes itself after applying', popup.isClosed());
+    popup = await openHost('popup.html', 380, 600);
+    popup.on('pageerror', e => errors.push(String(e)));
+    await send(popup, { action: 'deletePreset', presetName: 'Alpha' });
+    await sw.evaluate(() => chrome.storage.local.remove(['undoLog', 'lastSession']));
+
+    // ---- Welcome page ----
+    const welcome = await ctx.newPage();
+    await welcome.goto(`chrome-extension://${extId}/welcome.html`);
+    await sw.evaluate(() => chrome.storage.sync.clear());
+    await welcome.reload(); await wait(400);
+    check('welcome page shows the three choices', (await welcome.locator('input[name=behavior]').count()) === 3);
+    await welcome.locator('input[value="smart_close_pinned"]').check();
+    await welcome.click('#finish'); await wait(400);
+    const welcomeSaved = await sw.evaluate(() => chrome.storage.sync.get(['presetBehavior', 'behaviorConfirmed']));
+    check('welcome page saves the choice', welcomeSaved.presetBehavior === 'smart_close_pinned' && welcomeSaved.behaviorConfirmed === true, welcomeSaved);
+    await welcome.close();
+    await sw.evaluate(() => chrome.storage.sync.set({ presetBehavior: 'close_all', behaviorConfirmed: true }));
+
+    // ---- Put back the presets the screenshots use ----
+    await sw.evaluate(() => chrome.storage.local.clear());
+    for (const n of ['Alpha', 'Bravo', 'Charlie']) await send(popup, { action: 'saveCurrentLayout', presetName: n });
 
     // ---- Long lists render in pages ----
     const manyData = {};

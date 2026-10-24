@@ -105,3 +105,36 @@ test('undoBudget shrinks as the presets grow and never goes negative', () => {
   assert.equal(WLM.undoBudget(quota), 0);
   assert.equal(WLM.undoBudget(quota * 2), 0);
 });
+
+const layoutOf = (...groups) => ({ windows: groups.map(urls => ({ tabs: urls.map(url => ({ url, title: url })) })), displays: [] });
+
+test('matchPreset finds the closest preset and counts what changed', () => {
+  const presets = {};
+  WLM.addPreset(presets, 'Code', layoutOf(['https://github.com/a', 'https://developer.mozilla.org/x']), 1);
+  WLM.addPreset(presets, 'Mail', layoutOf(['https://mail.google.com/', 'https://calendar.google.com/']), 1);
+  const exact = WLM.matchPreset(layoutOf(['https://github.com/a'], ['https://developer.mozilla.org/x']), presets);
+  assert.equal(exact.name, 'Code');
+  assert.equal(exact.score, 1);
+  const drifted = WLM.matchPreset(layoutOf(['https://github.com/a', 'https://developer.mozilla.org/x', 'https://news.test/new']), presets);
+  assert.equal(drifted.name, 'Code');
+  assert.deepEqual([drifted.added, drifted.removed], [1, 0]);
+  assert.ok(drifted.score > 0.6 && drifted.score < 1);
+});
+
+test('matchPreset ignores fragments and trailing slashes, and returns null with no overlap', () => {
+  const presets = {};
+  WLM.addPreset(presets, 'Docs', layoutOf(['https://docs.test/guide/']), 1);
+  assert.equal(WLM.matchPreset(layoutOf(['https://docs.test/guide#intro']), presets).score, 1);
+  assert.equal(WLM.matchPreset(layoutOf(['https://other.test/']), presets), null);
+  assert.equal(WLM.matchPreset(layoutOf(['file:///etc/hosts']), presets), null, 'non-web layouts never match');
+  assert.equal(WLM.matchPreset(layoutOf(['https://a.test/']), {}), null);
+});
+
+test('suggestName names a layout after its two most common sites', () => {
+  assert.equal(WLM.suggestName(layoutOf(['https://github.com/a', 'https://github.com/b'], ['https://developer.mozilla.org/x'])), 'Github + Mozilla');
+  assert.equal(WLM.suggestName(layoutOf(['https://www.bbc.co.uk/news'])), 'Bbc');
+  assert.equal(WLM.suggestName(layoutOf(['https://docs.google.com/d/1', 'https://mail.google.com/'])), 'Google');
+  assert.equal(WLM.suggestName(layoutOf(['http://localhost:3000/'])), 'Localhost');
+  assert.equal(WLM.suggestName({ windows: [], displays: [] }), 'Layout');
+  assert.equal(WLM.suggestName(layoutOf(['http://127.0.0.1:8080/a'])), '127.0.0.1', 'an IP address is not split into labels');
+});

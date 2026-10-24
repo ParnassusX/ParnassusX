@@ -21,8 +21,17 @@
           <button class="btn btn-primary" type="submit">Save</button>
         </div>
         <p id="name-error" class="field-error" role="alert"></p>
+        <button id="suggest" class="chip-button hidden" type="button"></button>
         <p class="muted small">Captures every normal window with web tabs, on every screen.</p>
       </form>
+    </section>
+
+    <section id="match-card" class="card hidden" aria-live="polite" aria-labelledby="match-title">
+      <h2 id="match-title" class="card-title">Current windows</h2>
+      <div class="row">
+        <p id="match-text" class="muted" style="flex:1"></p>
+        <button id="match-update" class="btn hidden" type="button"></button>
+      </div>
     </section>
 
     <section id="change-card" class="card hidden" aria-labelledby="change-title">

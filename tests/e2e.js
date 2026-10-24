@@ -70,6 +70,16 @@ async function main() {
     const dup = await send(popup, { action: 'saveCurrentLayout', presetName: 'Work' });
     check('saving an existing name is refused with an error status', dup.status === 'error' && dup.success === false, dup);
 
+    // ---- Safe by default: until a choice is made, nothing is closed ----
+    await sw.evaluate(() => chrome.storage.sync.clear());
+    const windowsBefore = (await normalWindows()).length;
+    const safeApply = await send(popup, { action: 'applyPreset', presetName: 'Work' });
+    await wait(1200);
+    const windowsAfterSafe = (await normalWindows()).length;
+    check('before a choice is made, apply closes nothing', safeApply.status === 'success' && windowsAfterSafe >= windowsBefore, { windowsBefore, windowsAfterSafe });
+    check('and leaves nothing to undo', (await send(panel, { action: 'getLastSession' })).session === null);
+    await sw.evaluate(() => chrome.storage.sync.set({ presetBehavior: 'close_all', behaviorConfirmed: true }));
+
     // ---- Apply restores URLs and the pinned flag ----
     const applied = await send(popup, { action: 'applyPreset', presetName: 'Work' });
     check('apply succeeds', applied.status === 'success', applied);
@@ -121,6 +131,28 @@ async function main() {
     await wait(1200);
     const tabUrls = await sw.evaluate(() => chrome.tabs.query({}).then(ts => ts.map(t => t.url)));
     check('no file: tab is opened', !tabUrls.some(u => u && u.startsWith('file:')), tabUrls);
+
+    // ---- Big layouts: only the front tab of each window loads ----
+    const manyTabs = { windows: [{ left: 10, top: 10, width: 900, height: 700, displayId: '1',
+      tabs: Array.from({ length: 14 }, (_, i) => ({ url: `${base}/lazy${i}`, title: `lazy ${i}`, active: i === 0 })) }],
+      displays: [{ id: '1', isPrimary: true, bounds: { left: 0, top: 0, width: 1920, height: 1080 } }] };
+    await fresh();
+    await send(panel, { action: 'savePreset', presetName: 'Many tabs', layoutData: manyTabs });
+    const lazyState = () => sw.evaluate((b) => chrome.tabs.query({}).then(ts => ts.filter(t => t.url && t.url.startsWith(b + '/lazy'))
+      .map(t => ({ discarded: t.discarded }))), base);
+    await sw.evaluate(() => chrome.storage.sync.set({ lazyTabs: true }));
+    await send(panel, { action: 'applyPreset', presetName: 'Many tabs' });
+    await wait(2000);
+    const lazy = await lazyState();
+    check('a 14-tab layout loads only the front tab', lazy.length === 14 && lazy.filter(t => t.discarded).length === 13, { total: lazy.length, discarded: lazy.filter(t => t.discarded).length });
+    await sw.evaluate(() => chrome.storage.sync.set({ lazyTabs: false }));
+    await send(panel, { action: 'applyPreset', presetName: 'Many tabs' });
+    await wait(2000);
+    const eager = await lazyState();
+    check('with the setting off, every tab loads', eager.length === 14 && eager.filter(t => t.discarded).length === 0, { total: eager.length, discarded: eager.filter(t => t.discarded).length });
+    await sw.evaluate(() => chrome.storage.sync.set({ lazyTabs: true }));
+    check('the toolbar icon opens the popup, not the side panel',
+      (await sw.evaluate(() => chrome.sidePanel.getPanelBehavior())).openPanelOnActionClick === false);
 
     // ---- A large library must never lock the extension (undo log is size-capped) ----
     const bigLayout = (i) => ({ windows: Array.from({ length: 4 }, (_, w) => ({ left: 10, top: 10, width: 900, height: 700, displayId: '1',

@@ -12,6 +12,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const changeText = document.getElementById('change-text');
   const changeUndo = document.getElementById('change-undo');
   const openManager = document.getElementById('open-manager');
+  const suggest = document.getElementById('suggest');
+  const matchCard = document.getElementById('match-card');
+  const matchText = document.getElementById('match-text');
+  const matchUpdate = document.getElementById('match-update');
+  let matchedName = null;
 
   openManager.replaceChildren(icon('external'), 'Manage');
   undoButton.replaceChildren(icon('undo'), 'Undo');
@@ -68,7 +73,48 @@ document.addEventListener('DOMContentLoaded', () => {
     if (change) changeText.textContent = change.label;
   }
 
+  // What the current windows look like: the preset they are closest to, and a
+  // name for a new one. Only addresses are compared, so nothing is stored.
+  async function renderSmart() {
+    const [captured, saved] = await Promise.all([send({ action: 'captureLayout' }), send({ action: 'getPresets' })]);
+    suggest.classList.add('hidden');
+    matchCard.classList.add('hidden');
+    if (captured.status !== 'success' || saved.status !== 'success') return;
+    const layout = WLM.sanitizeLayout(captured.layout);
+    if (!layout) return;
+
+    const taken = WLM.uniqueName(saved.presets, WLM.suggestName(layout));
+    if (taken && !nameInput.value.trim()) {
+      suggest.replaceChildren(icon('plus'), `Name it "${taken}"`);
+      suggest.onclick = () => { nameInput.value = taken; nameInput.focus(); suggest.classList.add('hidden'); };
+      suggest.classList.remove('hidden');
+    }
+
+    const match = WLM.matchPreset(layout, saved.presets);
+    matchedName = null;
+    if (!match || match.score < 0.5) return;
+    matchCard.classList.remove('hidden');
+    if (match.score === 1) {
+      matchText.textContent = `Your windows match "${match.name}".`;
+      matchUpdate.classList.add('hidden');
+      return;
+    }
+    matchedName = match.name;
+    matchText.textContent = `Looks like "${match.name}": ${match.added} new and ${match.removed} closed since you saved it.`;
+    matchUpdate.replaceChildren(icon('update'), 'Update');
+    matchUpdate.setAttribute('aria-label', `Update ${match.name} with the current windows`);
+    matchUpdate.classList.remove('hidden');
+  }
+
+  matchUpdate.addEventListener('click', async () => {
+    if (!matchedName) return;
+    const response = await send({ action: 'updateCurrentLayout', presetName: matchedName });
+    toast(response.message, response.success ? 'success' : 'error');
+    renderQuick(); renderUndo(); renderSmart();
+  });
+
   async function apply(name) {
+    if (!(await UI.ensureBehaviorChosen())) return;
     const response = await send({ action: 'applyPreset', presetName: name, keepWindowId: await lastFocusedWindowId() });
     if (response.status === 'success') {
       toast(`Applied "${name}".`, 'success');
@@ -94,6 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
       nameInput.value = '';
       renderQuick();
       renderUndo();
+      renderSmart();
     } else {
       // Keep the typed name so it can be changed, and say why.
       nameError.textContent = response.message || 'Could not save the layout.';
@@ -122,5 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   renderQuick();
   renderUndo();
+  renderSmart();
   nameInput.focus();
 });
