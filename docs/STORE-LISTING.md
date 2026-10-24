@@ -39,8 +39,17 @@ Private by design: everything stays on your device. No account, no analytics, no
 - The extension handles website content in the sense of tab URLs and titles, and stores them locally only.
 - It does not sell data, transfer it to third parties, or use it for anything other than the single purpose above.
 
-## Assets still to make
+## Assets
 
-- At least one screenshot at 1280x800 (or 640x400), ideally three to five.
-- Small promo tile (440x280). The 128x128 icon exists.
-- Public URL for the privacy policy (`docs/PRIVACY.md`) and a support contact.
+Generated from the real interface by `tools/store-assets.js`, in `store/en/` and `store/it/`:
+
+- five screenshots at 1280x800 (JPEG), `screenshot-1.jpg` to `screenshot-5.jpg`;
+- small promo tile 440x280, `promo-small.jpg`;
+- marquee 1400x560, `promo-marquee.jpg`;
+- the 128x128 icon is `icons/icon128.png`.
+
+## Still needed from the owner
+
+- A public URL for the privacy policy: host the `site/` folder (for example with GitHub Pages) and use `privacy.html`.
+- A support contact: build the site with `CONTACT_EMAIL=...` and use the same address in the listing.
+- The store URL, once the item exists, for the landing page button (`STORE_URL=...`).

@@ -4,7 +4,7 @@
   "private": true,
   "description": "Chrome MV3 extension that saves and restores window and tab layouts.",
   "scripts": {
-    "test": "node --test tests/layout.test.js tests/preview.test.js tests/library.test.js tests/roast-ux.test.js tests/i18n.test.js",
+    "test": "node --test tests/layout.test.js tests/preview.test.js tests/library.test.js tests/roast-ux.test.js tests/i18n.test.js tests/site.test.js",
     "test:e2e": "node tests/e2e.js",
     "test:e2e:ui": "node tests/e2e-ui.js",
     "test:e2e:it": "node tests/e2e-it.js"

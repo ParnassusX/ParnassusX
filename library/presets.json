@@ -244,7 +244,7 @@
       },
       "translations": {
         "it": {
-          "name": "Pianificazione giornaliera",
+          "name": "Pianificazione",
           "category": "Produttività",
           "description": "Calendario e posta affiancati, con l'elenco delle attività fissato nella finestra della posta."
         }
@@ -319,7 +319,7 @@
       },
       "translations": {
         "it": {
-          "name": "Preparazione presentazione",
+          "name": "Presentazione",
           "category": "Presentazioni",
           "description": "Slide in una finestra grande, note del relatore e timer in una finestra stretta a destra."
         }
@@ -383,7 +383,7 @@
       },
       "translations": {
         "it": {
-          "name": "Sessione di lettura",
+          "name": "Lettura",
           "category": "Ricerca",
           "description": "Una sola finestra per le letture lunghe: l'elenco di lettura fissato, gli articoli nei tab."
         }

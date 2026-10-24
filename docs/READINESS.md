@@ -111,3 +111,38 @@ Da fare, nell'ordine:
 1. Pubblica come **beta gratuita** dopo i punti 1–4. Costa $5 una tantum e i soldi in gioco sono nulli.
 2. **Misura prima di costruire il sync**: installazioni, recensioni, e quanti utenti hanno più di 10 preset o più monitor. Sono i segnali che dicono se c'è spazio per un Pro.
 3. **Non vendere ancora.** Costruire licenze e backend prima di sapere se qualcuno li vuole è il modo più costoso di scoprire che la risposta è no.
+
+---
+
+## Aggiornamento: dopo il giro "memorabile e pubblicabile" (24 ottobre 2026)
+
+Ho chiuso tutto quello che si poteva chiudere senza una scelta tua. Le cifre sono misurate (**[MISURATO]**), il resto è dichiarato.
+
+**Memorabile**
+- **Identità**: icona nuova, palette indaco e ambra, movimento discreto (disattivato con `prefers-reduced-motion`), illustrazione per gli stati vuoti. Tutte le 40 coppie di colori per testo e controlli superano le soglie WCAG in chiaro e in scuro. [MISURATO]
+- **Miniature distinguibili**: ogni finestra ha il colore e l'iniziale del sito. Prima erano rettangoli blu quasi identici.
+- **Onboarding**: pagina di benvenuto alla prima installazione, con una sola scelta.
+- **Più "smart"**: riconosce a quale preset somigliano le finestre aperte, dice cosa è cambiato e propone di aggiornarlo; suggerisce un nome dai siti aperti. Test unitari e controlli in Chromium. [MISURATO]
+
+**Più sicura e più leggera**
+- Finché l'utente non sceglie come applicare i layout, non viene mai chiuso nulla (prima il default chiudeva le altre finestre). [MISURATO]
+- I layout con più di 10 tab caricano solo il tab in primo piano di ogni finestra: 13 tab su 14 restano scaricati. [MISURATO]
+- L'icona della barra apre il popup in modo deterministico; la side panel serve a gestire.
+
+**Pubblicabile**
+- **Italiano e inglese**: 202 stringhe, controllate da un test che fallisce se ne manca una o se un segnaposto non coincide; un test in Chromium con lingua italiana verifica che non resti inglese traducibile a schermo. [MISURATO]
+- **Asset dello store**: cinque screenshot 1280x800, riquadro 440x280 e marquee 1400x560, in due lingue, generati dall'interfaccia vera. [MISURATO: dimensioni controllate da test]
+- **Sito**: pagina di presentazione e informativa privacy in due lingue, senza script né richieste esterne, senza overflow a 390 px. [MISURATO]
+- Manifest: nome e descrizione localizzati, `minimum_chrome_version` 123.
+
+**Test**: 66 unitari, 30 + 44 + 19 controlli in Chromium (messaggi, interfaccia cliccata, italiano).
+
+### Cosa resta, e non posso chiuderlo io
+
+1. **Provarla su Chrome di marca**, su Windows e su macOS, con un secondo monitor. Tutto è stato provato solo su Chromium sotto Linux con uno schermo virtuale.
+2. **La licenza**: manca `LICENSE`. Scelta tua.
+3. **Contatto e URL dello store**: servono per la privacy e il pulsante del sito (`CONTACT_EMAIL`, `STORE_URL` in `tools/build-site.js`).
+4. **Pubblicare il sito** (per esempio con GitHub Pages) per avere l'URL dell'informativa.
+5. **Il nome.** "Window Layout Manager" è descrittivo ma generico: si trova male nelle ricerche e non si ricorda. Cambiarlo è una decisione di marchio.
+6. **Il default di applicazione** dopo la scelta iniziale: ora propone "Sostituisci le mie finestre" già selezionato.
+7. **La disponibilità a pagare** resta non misurata: nessuna funzione a pagamento esiste ancora.

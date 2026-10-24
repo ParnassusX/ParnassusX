@@ -6,9 +6,17 @@ Status: early version. Tested in Chromium on a single display. Multi-monitor pla
 
 ## What it does
 
-**Save.** Click the toolbar icon, name the layout, press Save. Every normal window with web tabs is captured: position, size, state, screen, and each tab's address, title, pinned and active state. Minimized windows and non-web tabs (`chrome://`, `file://`, extension pages) are skipped.
+**First run.** A welcome page opens on install and asks one question: what should happen to the windows that are already open when a layout is applied. Until that is answered, nothing is ever closed.
+
+**Save.** Click the toolbar icon (it opens the popup; the side panel is for managing), name the layout, press Save. Every normal window with web tabs is captured: position, size, state, screen, and each tab's address, title, pinned and active state. Minimized windows and non-web tabs (`chrome://`, `file://`, extension pages) are skipped.
 
 **Apply.** The popup shows your first three presets for quick apply. The side panel lists all of them, with a thumbnail, window and tab counts, and a list of the tabs to check before you apply.
+
+**Smart.** The popup notices when your open windows match a saved preset, says what changed, and offers to update it. For a new layout it suggests a name from the sites you have open. Thumbnails are coloured by site and carry its initial.
+
+**Big layouts.** A layout with more than 10 tabs loads only each window's front tab; the others keep their title and load when you open them (a setting).
+
+**Languages.** English and Italian, following the browser language.
 
 **Undo.** Applying a layout with "Close other windows first" closes windows. Before it does, the current windows are remembered. The popup and side panel then offer **Undo**, which brings them back without closing anything else.
 
@@ -62,6 +70,7 @@ npm test                      # unit tests: layout, scaling, history, search, sl
 npm i --no-save playwright    # once, for the browser tests
 xvfb-run -a npm run test:e2e     # message-level checks in Chromium
 xvfb-run -a npm run test:e2e:ui  # click-driven checks: every button and dialog path
+xvfb-run -a npm run test:e2e:it  # the same pages in Italian: no translatable English text left
 # CHROME_BIN picks a binary; SCREENSHOT_DIR saves screenshots for review
 ```
 
@@ -75,12 +84,17 @@ To regenerate the PNG icons from `icons/icon.svg`: `CHROME_BIN=... node tools/re
 - `lib/ui.js`: shared UI helpers: messaging, icons, dialogs.
 - `popup.*`, `sidepanel.*`, `style.css`: the interface.
 - `lib/ui.js`: shared UI helpers: messages, icons, dialogs with inline validation, toasts with actions, menus.
+- `lib/i18n.js`, `locales/it.js`, `_locales/`: the translator, the Italian dictionary, and the manifest strings.
+- `welcome.*`: the first-run page.
+- `store/`: Chrome Web Store images (five screenshots, small tile, marquee), in English and Italian. Regenerate with `tools/store-assets.js`.
+- `site/`: a static landing page and privacy policy in both languages. Regenerate with `tools/build-site.js` (set `STORE_URL` and `CONTACT_EMAIL`).
+- `tools/`: icon renderer, store-image generator, site builder, string extractor for the translations.
 - `library/presets.json`: built-in layouts, drawn for a 1920×1040 reference screen.
 - `icons/`: `icon.svg` is the source; the PNG sizes are generated from it.
 - `docs/ROAST.md`: review of the first version and what was fixed.
 - `docs/ROAST-UX.md`: review of the interface and flows, with what was verified and what is still open.
 - `docs/INSPIRATION.md`: open source projects looked at, and which ideas were taken.
 - `docs/READINESS.md`: honest verdict on whether the app is ready to publish and to sell.
-- `docs/PRIVACY.md`, `docs/STORE-LISTING.md`: drafts for the Chrome Web Store submission.
+- `docs/PRIVACY.md`, `docs/STORE-LISTING.md`: the store submission texts. `site/privacy.html` is the publishable policy.
 - `docs/MONETIZATION.md`: draft plan for a paid tier.
 - `docs/strategy/`: early concept notes. They are not validated and do not describe what is built.
