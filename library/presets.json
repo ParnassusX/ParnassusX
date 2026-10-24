@@ -74,6 +74,13 @@
             }
           }
         ]
+      },
+      "translations": {
+        "it": {
+          "name": "Revisione del codice",
+          "category": "Sviluppo",
+          "description": "Pull request a sinistra, documentazione di riferimento a destra. Ottimo per rivedere una modifica leggendo le specifiche."
+        }
       }
     },
     {
@@ -159,6 +166,13 @@
             }
           }
         ]
+      },
+      "translations": {
+        "it": {
+          "name": "Scrittura con fonti",
+          "category": "Scrittura",
+          "description": "Bozza in una finestra grande a sinistra, con appunti di ricerca e bibliografia a destra."
+        }
       }
     },
     {
@@ -227,6 +241,13 @@
             }
           }
         ]
+      },
+      "translations": {
+        "it": {
+          "name": "Pianificazione giornaliera",
+          "category": "Produttività",
+          "description": "Calendario e posta affiancati, con l'elenco delle attività fissato nella finestra della posta."
+        }
       }
     },
     {
@@ -295,6 +316,13 @@
             }
           }
         ]
+      },
+      "translations": {
+        "it": {
+          "name": "Preparazione presentazione",
+          "category": "Presentazioni",
+          "description": "Slide in una finestra grande, note del relatore e timer in una finestra stretta a destra."
+        }
       }
     },
     {
@@ -352,6 +380,13 @@
             }
           }
         ]
+      },
+      "translations": {
+        "it": {
+          "name": "Sessione di lettura",
+          "category": "Ricerca",
+          "description": "Una sola finestra per le letture lunghe: l'elenco di lettura fissato, gli articoli nei tab."
+        }
       }
     },
     {
@@ -420,6 +455,13 @@
             }
           }
         ]
+      },
+      "translations": {
+        "it": {
+          "name": "Riunione",
+          "category": "Riunioni",
+          "description": "Videochiamata nei due terzi a sinistra, note condivise e agenda a destra."
+        }
       }
     }
   ]

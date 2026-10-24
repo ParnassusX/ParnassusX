@@ -1,8 +1,9 @@
 {
-  "name": "Window Layout Manager",
-  "description": "Save and restore window and tab layouts as named presets.",
+  "name": "__MSG_appName__",
+  "description": "__MSG_appDescription__",
   "version": "0.2.0",
   "minimum_chrome_version": "123",
+  "default_locale": "en",
   "manifest_version": 3,
   "icons": {
     "16": "icons/icon16.png",
@@ -11,7 +12,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Window Layout Manager",
+    "default_title": "__MSG_actionTitle__",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -34,21 +35,21 @@
         "default": "Ctrl+Shift+1",
         "mac": "Command+Shift+1"
       },
-      "description": "Apply first preset (alphabetical)"
+      "description": "__MSG_cmd1__"
     },
     "apply-preset-2": {
       "suggested_key": {
         "default": "Ctrl+Shift+2",
         "mac": "Command+Shift+2"
       },
-      "description": "Apply second preset (alphabetical)"
+      "description": "__MSG_cmd2__"
     },
     "apply-preset-3": {
       "suggested_key": {
         "default": "Ctrl+Shift+3",
         "mac": "Command+Shift+3"
       },
-      "description": "Apply third preset (alphabetical)"
+      "description": "__MSG_cmd3__"
     }
   },
   "side_panel": {

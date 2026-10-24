@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function save() {
     const picked = document.querySelector('input[name="behavior"]:checked');
     await chrome.storage.sync.set({ presetBehavior: picked.value, behaviorConfirmed: true });
-    status.textContent = 'Saved. You are ready: click the toolbar icon to save your first layout.';
+    status.textContent = t('Saved. You are ready: click the toolbar icon to save your first layout.');
   }
 
   document.getElementById('finish').addEventListener('click', save);
@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await save();
     const win = await new Promise(resolve => chrome.windows.getCurrent(resolve));
     chrome.sidePanel.open({ windowId: win.id }).catch(() => {
-      status.textContent = 'Saved. Open the manager from the popup with the Manage button.';
+      status.textContent = t('Saved. Open the manager from the popup with the Manage button.');
     });
   });
 });

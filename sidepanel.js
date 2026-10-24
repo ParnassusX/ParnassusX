@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
       icon(iconName),
       h('p', { text }),
       actionLabel ? h('button', { class: 'btn', type: 'button', onclick: onAction }, actionLabel) : null,
-      onDismiss ? h('button', { class: 'btn btn-ghost btn-icon', type: 'button', 'aria-label': 'Dismiss', onclick: onDismiss }, icon('close')) : null,
+      onDismiss ? h('button', { class: 'btn btn-ghost btn-icon', type: 'button', 'aria-label': t('Dismiss'), onclick: onDismiss }, icon('close')) : null,
     ].filter(Boolean));
   }
   function hideBanner(el) {
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     banner(changeBanner, {
       iconName: 'undo',
       text: undo.label,
-      actionLabel: 'Undo',
+      actionLabel: t('Undo'),
       onAction: async () => {
         const response = await send({ action: 'undoPresetChange' });
         toast(response.message, response.success ? 'success' : 'error');
@@ -84,8 +84,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const time = new Date(session.savedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
     banner(undoBanner, {
       iconName: 'undo',
-      text: `A layout closed your windows at ${time}. ${plural(session.windows, 'window')} can come back.`,
-      actionLabel: 'Bring back',
+      text: t('A layout closed your windows at {time}. {windows} can come back.', { time, windows: plural(session.windows, 'window') }),
+      actionLabel: t('Bring back'),
       onAction: undoLastApply,
     });
   }
@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!changed || screensDismissed) return hideBanner(screensBanner);
     banner(screensBanner, {
       iconName: 'warning',
-      text: 'Your screens differ from when some presets were saved. Those presets are scaled to fit.',
+      text: t('Your screens differ from when some presets were saved. Those presets are scaled to fit.'),
       onDismiss: () => { screensDismissed = true; renderScreensBanner(); },
     });
   }
@@ -120,16 +120,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function tabList(name, entry) {
     const lines = entry.windows.flatMap((win, w) => [
-      h('li', { class: 'tab-window', text: `Window ${w + 1}${win.state !== 'normal' ? ` (${win.state})` : ''}` }),
-      ...win.tabs.map((tab, t) => h('li', { class: 'tab-line' + (tab.pinned ? ' pinned' : ''), title: tab.url },
-        h('span', { class: 'tab-text' }, tab.pinned ? h('span', { class: 'pin-mark', 'aria-label': 'pinned' }, '● ') : null, h('span', { text: tab.title || tab.url })),
+      h('li', { class: 'tab-window', text: win.state !== 'normal' ? t('Window {n} ({state})', { n: w + 1, state: t(win.state) }) : t('Window {n}', { n: w + 1 }) }),
+      ...win.tabs.map((tab, ti) => h('li', { class: 'tab-line' + (tab.pinned ? ' pinned' : ''), title: tab.url },
+        h('span', { class: 'tab-text' }, tab.pinned ? h('span', { class: 'pin-mark', 'aria-label': t('pinned') }, '● ') : null, h('span', { text: tab.title || tab.url })),
         entry.windows.reduce((n, x) => n + x.tabs.length, 0) > 1
-          ? h('button', { class: 'btn btn-ghost btn-icon tab-remove', type: 'button', title: 'Remove this tab from the preset', 'aria-label': `Remove ${tab.title || tab.url} from ${name}`,
-              onclick: () => removeTab(name, w, t) }, icon('close'))
+          ? h('button', { class: 'btn btn-ghost btn-icon tab-remove', type: 'button', title: t('Remove this tab from the preset'), 'aria-label': t('Remove {tab} from {name}', { tab: tab.title || tab.url, name }),
+              onclick: () => removeTab(name, w, ti) }, icon('close'))
           : null)),
     ]);
     return h('details', { class: 'tab-details' },
-      h('summary', { text: `Show ${plural(entry.windows.reduce((n, w) => n + w.tabs.length, 0), 'tab')}` }),
+      h('summary', { text: t('Show {tabs}', { tabs: plural(entry.windows.reduce((n, w) => n + w.tabs.length, 0), 'tab') }) }),
       h('ul', { class: 'tab-tree' }, ...lines));
   }
 
@@ -141,23 +141,23 @@ document.addEventListener('DOMContentLoaded', () => {
       type: 'button', role: 'menuitem', class: danger ? 'danger' : '', disabled,
       'aria-current': current ? 'true' : null,
       onclick,
-    }, icon(iconName), label, current ? h('span', { class: 'menu-note', text: 'current' }) : null);
+    }, icon(iconName), label, current ? h('span', { class: 'menu-note', text: t('current') }) : null);
 
-    const slotItems = [1, 2, 3].map(index => menuItem('keyboard', `Shortcut ${index}`,
+    const slotItems = [1, 2, 3].map(index => menuItem('keyboard', t('Shortcut {n}', { n: index }),
       () => setSlot(index, name), { current: slot === index }));
-    if (slot) slotItems.push(menuItem('close', 'Remove shortcut', () => setSlot(slot, null)));
+    if (slot) slotItems.push(menuItem('close', t('Remove shortcut'), () => setSlot(slot, null)));
 
     const menu = h('details', { class: 'menu' },
-      h('summary', { class: 'btn btn-ghost btn-icon', title: 'More actions', 'aria-label': `More actions for ${name}`, 'aria-haspopup': 'menu' }, icon('more')),
+      h('summary', { class: 'btn btn-ghost btn-icon', title: t('More actions'), 'aria-label': t('More actions for {name}', { name }), 'aria-haspopup': 'menu' }, icon('more')),
       h('div', { class: 'menu-panel', role: 'menu' },
-        menuItem('rename', 'Rename', () => renamePreset(name)),
-        menuItem('copy', 'Duplicate', () => duplicatePreset(name)),
-        menuItem('history', 'Previous version', () => revertPreset(name), { disabled: entry.history.length === 0 }),
+        menuItem('rename', t('Rename'), () => renamePreset(name)),
+        menuItem('copy', t('Duplicate'), () => duplicatePreset(name)),
+        menuItem('history', t('Previous version'), () => revertPreset(name), { disabled: entry.history.length === 0 }),
         h('div', { class: 'menu-sep', role: 'separator' }),
-        h('div', { class: 'menu-label', text: 'Keyboard shortcut' }),
+        h('div', { class: 'menu-label', text: t('Keyboard shortcut') }),
         ...slotItems,
         h('div', { class: 'menu-sep', role: 'separator' }),
-        menuItem('trash', 'Delete', () => deletePreset(name), { danger: true }),
+        menuItem('trash', t('Delete'), () => deletePreset(name), { danger: true }),
       ),
     );
 
@@ -166,14 +166,14 @@ document.addEventListener('DOMContentLoaded', () => {
       h('div', { class: 'preset-body' },
         h('div', { class: 'preset-name-row' },
           h('span', { class: 'preset-name', title: name, text: name }),
-          slot ? h('span', { class: 'badge', title: `Ctrl+Shift+${slot} (Command+Shift+${slot} on Mac)`, text: `Shortcut ${slot}` }) : null),
+          slot ? h('span', { class: 'badge', title: t('Ctrl+Shift+{n} (Command+Shift+{n} on Mac)', { n: slot }), text: t('Shortcut {n}', { n: slot }) }) : null),
         h('div', { class: 'preset-meta', text: summaryLine(entry) }),
-        h('div', { class: 'preset-meta', text: `Saved ${formatDate(entry.savedAt)}${entry.updatedAt !== entry.savedAt ? ` · updated ${formatDate(entry.updatedAt)}` : ''}` }),
-        changed ? h('div', { class: 'flag', text: 'Screens differ: will be scaled' }) : null,
-        entry.reference ? h('div', { class: 'preset-meta', text: 'Library layout, scaled to this screen' }) : null,
+        h('div', { class: 'preset-meta', text: t('Saved {date}', { date: formatDate(entry.savedAt) }) + (entry.updatedAt !== entry.savedAt ? ' · ' + t('updated {date}', { date: formatDate(entry.updatedAt) }) : '') }),
+        changed ? h('div', { class: 'flag', text: t('Screens differ: will be scaled') }) : null,
+        entry.reference ? h('div', { class: 'preset-meta', text: t('Library layout, scaled to this screen') }) : null,
         h('div', { class: 'preset-actions' },
-          h('button', { class: 'btn btn-primary', type: 'button', onclick: () => applyPreset(name), 'aria-label': `Apply ${name}` }, icon('apply'), 'Apply'),
-          h('button', { class: 'btn', type: 'button', onclick: () => updatePreset(name), 'aria-label': `Update ${name} with the current layout` }, icon('update'), 'Update'),
+          h('button', { class: 'btn btn-primary', type: 'button', onclick: () => applyPreset(name), 'aria-label': t('Apply {name}', { name }) }, icon('apply'), t('Apply')),
+          h('button', { class: 'btn', type: 'button', onclick: () => updatePreset(name), 'aria-label': t('Update {name} with the current layout', { name }) }, icon('update'), t('Update')),
           menu,
         ),
       ),
@@ -189,12 +189,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (Object.keys(presets).length === 0) {
       presetList.append(h('div', { class: 'empty' },
         UI.emptyArt(),
-        h('h2', { text: 'Nothing saved yet' }),
-        h('p', { text: 'Arrange your windows the way you like them, then press Capture. Or start from the Library.' })));
+        h('h2', { text: t('Nothing saved yet') }),
+        h('p', { text: t('Arrange your windows the way you like them, then press Capture. Or start from the Library.') })));
       return;
     }
     if (names.length === 0) {
-      presetList.append(h('p', { class: 'muted', text: `Nothing matches "${searchInput.value.trim()}".` }));
+      presetList.append(h('p', { class: 'muted', text: t('Nothing matches "{query}".', { query: searchInput.value.trim() }) }));
       return;
     }
     if (highlightName && names.indexOf(highlightName) >= visibleCount) visibleCount = names.indexOf(highlightName) + 1;
@@ -202,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (names.length > visibleCount) {
       const remaining = names.length - visibleCount;
       presetList.append(h('button', { class: 'btn btn-block', type: 'button', onclick: () => { visibleCount += PAGE_SIZE; renderPresets(); } },
-        `Show ${Math.min(remaining, PAGE_SIZE)} more (${remaining} not shown)`));
+        t('Show {n} more ({remaining} not shown)', { n: Math.min(remaining, PAGE_SIZE), remaining })));
     }
     if (highlightName) {
       const node = presetList.querySelector(`[data-name="${CSS.escape(highlightName)}"]`);
@@ -213,14 +213,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Name validation shared by Capture and Rename. Returns an error message or null.
   function nameError(value, ignore = null) {
-    if (!value) return 'Enter a name.';
-    if (value !== ignore && Object.prototype.hasOwnProperty.call(presets, value)) return 'That name is already used. Pick another.';
+    if (!value) return t('Enter a name.');
+    if (value !== ignore && Object.prototype.hasOwnProperty.call(presets, value)) return t('That name is already used. Pick another.');
     return null;
   }
 
   function suggestName() {
     for (let i = 1; i < 1000; i++) {
-      const candidate = i === 1 ? 'Layout' : `Layout ${i}`;
+      const candidate = i === 1 ? t('Layout') : `${t('Layout')} ${i}`;
       if (!presets[candidate]) return candidate;
     }
     return '';
@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function captureNew() {
     const name = await promptDialog({
-      title: 'Save current layout', label: 'Name', value: suggestName(), confirmLabel: 'Save',
+      title: t('Save current layout'), label: t('Name'), value: suggestName(), confirmLabel: t('Save'),
       validate: value => nameError(value),
     });
     if (!name) return;
@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function applyPreset(name) {
     if (!(await UI.ensureBehaviorChosen())) return;
     const response = await send({ action: 'applyPreset', presetName: name, keepWindowId: await currentWindowId() });
-    toast(response.status === 'success' ? `Applied "${name}".` : response.message, response.status === 'success' ? 'success' : 'error');
+    toast(response.status === 'success' ? t('Applied "{name}".', { name }) : response.message, response.status === 'success' ? 'success' : 'error');
     refreshApplyBanner();
     loadPresets();
   }
@@ -268,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function renamePreset(name) {
     const newName = await promptDialog({
-      title: 'Rename preset', label: 'Name', value: name, confirmLabel: 'Rename',
+      title: t('Rename preset'), label: t('Name'), value: name, confirmLabel: t('Rename'),
       validate: value => nameError(value, name),
     });
     if (!newName || newName === name) return;
@@ -300,7 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   searchInput.addEventListener('input', () => { visibleCount = PAGE_SIZE; renderPresets(); });
   const captureButton = document.getElementById('capture');
-  captureButton.replaceChildren(icon('plus'), 'Capture');
+  captureButton.replaceChildren(icon('plus'), t('Capture'));
   captureButton.addEventListener('click', captureNew);
 
   // ---- Library ------------------------------------------------------------
@@ -313,9 +313,15 @@ document.addEventListener('DOMContentLoaded', () => {
       library = (await response.json()).presets;
     } catch (error) {
       library = [];
-      toast(`Could not load the library: ${error.message}`, 'error');
+      toast(t('Could not load the library: {error}', { error: error.message }), 'error');
     }
     return library;
+  }
+
+  // A library entry may carry translations: { it: { name, category, description } }.
+  function libraryText(item) {
+    const translated = item.translations && item.translations[I18N.language()];
+    return { name: item.name, category: item.category, description: item.description, ...(translated || {}) };
   }
 
   async function renderLibrary() {
@@ -327,11 +333,11 @@ document.addEventListener('DOMContentLoaded', () => {
       libraryList.append(h('article', { class: 'preset library-card' },
         preview(stored, { width: 96, height: 60 }),
         h('div', { class: 'preset-body' },
-          h('div', { class: 'preset-name', text: item.name }),
-          h('span', { class: 'chip', text: item.category }),
-          h('p', { text: item.description }),
+          h('div', { class: 'preset-name', text: libraryText(item).name }),
+          h('span', { class: 'chip', text: libraryText(item).category }),
+          h('p', { text: libraryText(item).description }),
           h('div', { class: 'preset-actions' },
-            h('button', { class: 'btn', type: 'button', onclick: () => addFromLibrary(item), 'aria-label': `Add ${item.name} to my presets` }, icon('plus'), 'Add to my presets'),
+            h('button', { class: 'btn', type: 'button', onclick: () => addFromLibrary(item), 'aria-label': t('Add {name} to my presets', { name: libraryText(item).name }) }, icon('plus'), t('Add to my presets')),
           ),
         ),
       ));
@@ -339,13 +345,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function addFromLibrary(item) {
-    const response = await send({ action: 'installPreset', presetName: item.name, layoutData: item.layout });
+    const response = await send({ action: 'installPreset', presetName: libraryText(item).name, layoutData: item.layout });
     if (!response.success) return toast(response.message, 'error');
-    const added = response.message.match(/^Preset "(.+)" saved\.$/);
-    const name = added ? added[1] : item.name;
+    const name = response.name || libraryText(item).name;
     await loadPresets();
-    toast(`Added "${name}".`, 'success', {
-      label: 'View',
+    toast(t('Added "{name}".', { name }), 'success', {
+      label: t('View'),
       onClick: () => { highlightName = name; selectTab('presets'); },
     });
   }
@@ -384,22 +389,22 @@ document.addEventListener('DOMContentLoaded', () => {
     slotList.replaceChildren();
     [1, 2, 3].forEach((index, i) => {
       slotList.append(h('li', {},
-        h('kbd', { text: `Ctrl+Shift+${index}` }),
-        h('span', { text: shortcutNames[i] ? ` → ${shortcutNames[i]}` : ' → no preset yet' })));
+        h('kbd', { text: t('Ctrl+Shift+{n}', { n: index }) }),
+        h('span', { text: shortcutNames[i] ? ` → ${shortcutNames[i]}` : ' → ' + t('no preset yet') })));
     });
   }
 
   // ---- Data ---------------------------------------------------------------
   const exportButton = document.getElementById('export');
   const importButton = document.getElementById('import');
-  exportButton.replaceChildren(icon('download'), 'Export all presets');
-  importButton.replaceChildren(icon('upload'), 'Import presets');
+  exportButton.replaceChildren(icon('download'), t('Export all presets'));
+  importButton.replaceChildren(icon('upload'), t('Import presets'));
 
   exportButton.addEventListener('click', async () => {
     const response = await send({ action: 'getPresets' });
     if (response.status !== 'success') return toast(response.message, 'error');
     const count = Object.keys(response.presets).length;
-    if (count === 0) return toast('No presets to export yet.', 'info');
+    if (count === 0) return toast(t('No presets to export yet.'), 'info');
     const blob = new Blob([JSON.stringify(response.presets, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const stamp = new Date().toISOString().slice(0, 10);
@@ -408,21 +413,21 @@ document.addEventListener('DOMContentLoaded', () => {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    toast(`Exported ${plural(count, 'preset')}.`, 'success');
+    toast(t('Exported {presets}.', { presets: plural(count, 'preset') }), 'success');
   });
 
   importButton.addEventListener('click', () => {
     const input = document.getElementById('import-file');
     const file = input.files[0];
-    if (!file) return toast('Choose a JSON file first.', 'error');
+    if (!file) return toast(t('Choose a JSON file first.'), 'error');
     const reader = new FileReader();
-    reader.onerror = () => toast('Could not read that file.', 'error');
+    reader.onerror = () => toast(t('Could not read that file.'), 'error');
     reader.onload = async () => {
       let data;
       try {
         data = JSON.parse(reader.result);
       } catch (error) {
-        return toast('That file is not valid JSON.', 'error');
+        return toast(t('That file is not valid JSON.'), 'error');
       }
       input.value = '';
       await report(send({ action: 'importPresets', data }));

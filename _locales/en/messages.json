@@ -1,0 +1,20 @@
+{
+  "appName": {
+    "message": "Window Layout Manager"
+  },
+  "appDescription": {
+    "message": "Save and restore window and tab layouts as presets."
+  },
+  "actionTitle": {
+    "message": "Window Layout Manager"
+  },
+  "cmd1": {
+    "message": "Apply the preset in shortcut slot 1"
+  },
+  "cmd2": {
+    "message": "Apply the preset in shortcut slot 2"
+  },
+  "cmd3": {
+    "message": "Apply the preset in shortcut slot 3"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "appName": {
+    "message": "Window Layout Manager"
+  },
+  "appDescription": {
+    "message": "Salva e ripristina layout di finestre e tab come preset."
+  },
+  "actionTitle": {
+    "message": "Window Layout Manager"
+  },
+  "cmd1": {
+    "message": "Applica il preset della scorciatoia 1"
+  },
+  "cmd2": {
+    "message": "Applica il preset della scorciatoia 2"
+  },
+  "cmd3": {
+    "message": "Applica il preset della scorciatoia 3"
+  }
+}

@@ -15,6 +15,13 @@ test('preview is an SVG with one rect per window and one per screen', () => {
   assert.equal((svg.match(/class="screen"/g) || []).length, 1);
 });
 
+test('the preview label counts windows with the right plural', () => {
+  const one = PREVIEW.renderPreviewSvg({ displays: [], windows: [{ left: 0, top: 0, width: 10, height: 10, tabs: [] }] });
+  assert.match(one, /aria-label="Layout preview: 1 window"/);
+  const two = PREVIEW.renderPreviewSvg({ displays: [], windows: [{ left: 0, top: 0, width: 10, height: 10, tabs: [] }, { left: 20, top: 0, width: 10, height: 10, tabs: [] }] });
+  assert.match(two, /aria-label="Layout preview: 2 windows"/);
+});
+
 test('preview ignores windows without geometry and never injects markup', () => {
   const svg = PREVIEW.renderPreviewSvg({
     displays: [],

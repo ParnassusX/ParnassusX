@@ -1,4 +1,4 @@
-importScripts('lib/layout.js');
+importScripts('lib/i18n.js', 'locales/it.js', 'lib/layout.js');
 
 const UNDO_LIMIT = 10;
 // Layouts with more tabs than this load only their active tab per window; the
@@ -36,7 +36,7 @@ function updatePresetStore(mutate) {
     const presetsBytes = JSON.stringify(presets).length;
     log = WLM.trimUndoLog(log, WLM.undoBudget(presetsBytes), UNDO_LIMIT);
     if (result.undoLabel && log.length === 0) {
-      result.message += ' This change is too large to undo.';
+      result.message += ' ' + t('This change is too large to undo.');
     }
 
     try {
@@ -45,9 +45,9 @@ function updatePresetStore(mutate) {
       // Out of space: the edit matters more than its history. Retry without it.
       try {
         await chrome.storage.local.set({ presets, undoLog: [] });
-        result.message += ' Undo history was cleared because storage is nearly full.';
+        result.message += ' ' + t('Undo history was cleared because storage is nearly full.');
       } catch (retryError) {
-        return { ok: false, message: 'Storage is full. Export and delete some presets, then try again.' };
+        return { ok: false, message: t('Storage is full. Export and delete some presets, then try again.') };
       }
     }
     return result;
@@ -69,7 +69,7 @@ async function captureCurrentWindowLayout(excludeWindowId) {
     const windows = await chrome.windows.getAll({ populate: true, windowTypes: ['normal'] });
     const displays = await chrome.system.display.getInfo();
     if (!displays || displays.length === 0) {
-      return { error: 'No display information available.' };
+      return { error: t('No display information available.') };
     }
     const sanitizedDisplays = displays.map(d => ({
       id: d.id, isPrimary: d.isPrimary, bounds: d.bounds, workArea: d.workArea,
@@ -96,7 +96,7 @@ async function captureCurrentWindowLayout(excludeWindowId) {
     return { windows: layoutWindows, displays: sanitizedDisplays };
   } catch (error) {
     console.error('Error in captureCurrentWindowLayout:', error.message);
-    return { error: `Failed to capture layout: ${error.message}` };
+    return { error: t('Failed to capture layout: {error}', { error: error.message }) };
   }
 }
 
@@ -187,10 +187,10 @@ async function restoreLayout(layout, savedDisplays, { presetBehavior, fit, keepW
   try {
     currentDisplays = await chrome.system.display.getInfo();
   } catch (error) {
-    return { success: false, message: `Failed to get current display information: ${error.message}` };
+    return { success: false, message: t('Failed to get current display information: {error}', { error: error.message }) };
   }
   if (!currentDisplays || currentDisplays.length === 0) {
-    return { success: false, message: 'No display information available.' };
+    return { success: false, message: t('No display information available.') };
   }
 
   if (presetBehavior === 'close_all' || presetBehavior === 'smart_close_pinned') {
@@ -267,17 +267,17 @@ async function applyPreset(presetName, keepWindowId) {
   try {
     allPresets = await getPresets();
   } catch (error) {
-    return { status: 'error', success: false, message: `Failed to retrieve presets: ${error.message}` };
+    return { status: 'error', success: false, message: t('Failed to retrieve presets: {error}', { error: error.message }) };
   }
   if (!Object.prototype.hasOwnProperty.call(allPresets, presetName)) {
-    return { status: 'error', success: false, message: `Preset "${presetName}" not found.` };
+    return { status: 'error', success: false, message: t('Preset "{name}" not found.', { name: presetName }) };
   }
   // Stored data is re-sanitized on the way out, so presets saved before URL
   // filtering existed cannot open file: or other non-web URLs.
   const entry = allPresets[presetName];
   const layout = WLM.sanitizeLayout(entry);
   if (!layout) {
-    return { status: 'error', success: false, message: `Preset "${presetName}" has no web tabs to restore.` };
+    return { status: 'error', success: false, message: t('Preset "{name}" has no web tabs to restore.', { name: presetName }) };
   }
 
   const settings = await readSettings();
@@ -290,14 +290,14 @@ async function applyPreset(presetName, keepWindowId) {
   if (!result.success) return { status: 'error', success: false, message: result.message };
 
   updatePresetStore(p => WLM.markUsed(p, presetName, Date.now())).catch(() => {});
-  return { status: 'success', success: true, message: `Preset "${presetName}" applied.` };
+  return { status: 'success', success: true, message: t('Preset "{name}" applied.', { name: presetName }) };
 }
 
 async function undoLastApply(keepWindowId) {
   const data = await chrome.storage.local.get('lastSession');
   const session = data.lastSession;
   if (!session || !session.layout) {
-    return { status: 'error', success: false, message: 'Nothing to undo.' };
+    return { status: 'error', success: false, message: t('Nothing to undo.') };
   }
   // Put the windows back without closing anything else.
   const result = await restoreLayout(session.layout, session.layout.displays, {
@@ -307,7 +307,7 @@ async function undoLastApply(keepWindowId) {
   });
   if (!result.success) return { status: 'error', success: false, message: result.message };
   await chrome.storage.local.remove('lastSession');
-  return { status: 'success', success: true, message: 'Previous layout restored.' };
+  return { status: 'success', success: true, message: t('Previous layout restored.') };
 }
 
 async function getLastSession() {
@@ -329,10 +329,10 @@ function undoPresetChange() {
   return serialized(async () => {
     const data = await chrome.storage.local.get('undoLog');
     const log = Array.isArray(data.undoLog) ? data.undoLog : [];
-    if (log.length === 0) return { status: 'error', success: false, message: 'Nothing to undo.' };
+    if (log.length === 0) return { status: 'error', success: false, message: t('Nothing to undo.') };
     const [top, ...rest] = log;
     await chrome.storage.local.set({ presets: top.presets, undoLog: rest });
-    return { status: 'success', success: true, message: `Undone: ${top.label}.` };
+    return { status: 'success', success: true, message: t('Undone: {label}.', { label: top.label }) };
   });
 }
 
@@ -343,11 +343,11 @@ function setShortcutSlot(index, presetName) {
     const data = await chrome.storage.local.get(['presets', 'shortcutSlots']);
     const presets = data.presets || {};
     if (presetName !== null && !Object.prototype.hasOwnProperty.call(presets, presetName)) {
-      return { status: 'error', success: false, message: `Preset "${presetName}" not found.` };
+      return { status: 'error', success: false, message: t('Preset "{name}" not found.', { name: presetName }) };
     }
     const slots = WLM.assignSlot(data.shortcutSlots || {}, index, presetName);
     await chrome.storage.local.set({ shortcutSlots: slots });
-    return { status: 'success', success: true, message: presetName ? `Shortcut ${index} now applies "${presetName}".` : `Shortcut ${index} cleared.` };
+    return { status: 'success', success: true, message: presetName ? t('Shortcut {index} now applies "{name}".', { index, name: presetName }) : t('Shortcut {index} cleared.', { index }) };
   });
 }
 
@@ -355,7 +355,7 @@ async function runShortcut(index) {
   const presets = await getPresets();
   const slots = await getShortcutSlots();
   const target = WLM.shortcutTargets(presets, slots)[index];
-  if (!target) return { status: 'error', success: false, message: 'No preset is assigned to this shortcut.' };
+  if (!target) return { status: 'error', success: false, message: t('No preset is assigned to this shortcut.') };
   return applyPreset(target);
 }
 
@@ -373,24 +373,24 @@ function dispatch(request) {
         if (layout.error) return { status: 'error', success: false, message: layout.error };
         return updatePresetStore((p, now) => {
           const name = WLM.validatePresetName(request.presetName);
-          return undoable(`Saved "${name}"`, WLM.addPreset(p, request.presetName, layout, now));
+          return undoable(t('Saved "{name}"', { name }), WLM.addPreset(p, request.presetName, layout, now));
         }).then(asResponse);
       });
     case 'updateCurrentLayout':
       return captureCurrentWindowLayout().then(layout => {
         if (layout.error) return { status: 'error', success: false, message: layout.error };
         return updatePresetStore((p, now) =>
-          undoable(`Updated "${request.presetName}"`, WLM.updatePreset(p, request.presetName, layout, now))).then(asResponse);
+          undoable(t('Updated "{name}"', { name: request.presetName }), WLM.updatePreset(p, request.presetName, layout, now))).then(asResponse);
       });
     case 'savePreset':
       return updatePresetStore((p, now) =>
-        undoable(`Saved "${request.presetName}"`, WLM.addPreset(p, request.presetName, request.layoutData, now))).then(asResponse);
+        undoable(t('Saved "{name}"', { name: request.presetName }), WLM.addPreset(p, request.presetName, request.layoutData, now))).then(asResponse);
     case 'updatePreset':
       return updatePresetStore((p, now) =>
-        undoable(`Updated "${request.presetName}"`, WLM.updatePreset(p, request.presetName, request.layoutData, now))).then(asResponse);
+        undoable(t('Updated "{name}"', { name: request.presetName }), WLM.updatePreset(p, request.presetName, request.layoutData, now))).then(asResponse);
     case 'renamePreset':
       return updatePresetStore((p, now) =>
-        undoable(`Renamed "${request.presetName}"`, WLM.renamePreset(p, request.presetName, request.newName, now)))
+        undoable(t('Renamed "{name}"', { name: request.presetName }), WLM.renamePreset(p, request.presetName, request.newName, now)))
         .then(async (result) => {
           if (result.ok) {
             const data = await chrome.storage.local.get('shortcutSlots');
@@ -399,25 +399,25 @@ function dispatch(request) {
           return asResponse(result);
         });
     case 'duplicatePreset':
-      return updatePresetStore((p, now) => undoable(`Duplicated "${request.presetName}"`, WLM.duplicatePreset(p, request.presetName, now))).then(asResponse);
+      return updatePresetStore((p, now) => undoable(t('Duplicated "{name}"', { name: request.presetName }), WLM.duplicatePreset(p, request.presetName, now))).then(asResponse);
     case 'revertPreset':
       return updatePresetStore((p, now) =>
-        undoable(`Restored an earlier version of "${request.presetName}"`, WLM.revertPreset(p, request.presetName, now))).then(asResponse);
+        undoable(t('Restored an earlier version of "{name}"', { name: request.presetName }), WLM.revertPreset(p, request.presetName, now))).then(asResponse);
     case 'removeTab':
       return updatePresetStore((p, now) =>
-        undoable(`Removed a tab from "${request.presetName}"`, WLM.removeTab(p, request.presetName, request.windowIndex, request.tabIndex, now))).then(asResponse);
+        undoable(t('Removed a tab from "{name}"', { name: request.presetName }), WLM.removeTab(p, request.presetName, request.windowIndex, request.tabIndex, now))).then(asResponse);
     case 'installPreset':
       return updatePresetStore((p, now) => {
         const result = WLM.installPreset(p, request.presetName, request.layoutData, now);
-        return result.ok ? undoable(`Added "${result.name}" from the library`, result) : result;
-      }).then(asResponse);
+        return result.ok ? undoable(t('Added "{name}" from the library', { name: result.name }), result) : result;
+      }).then(result => ({ ...asResponse(result), name: result.name }));
     case 'deletePreset':
       return updatePresetStore((p) => {
         if (!Object.prototype.hasOwnProperty.call(p, request.presetName)) {
           return { ok: false, message: `Preset "${request.presetName}" not found.` };
         }
         delete p[request.presetName];
-        return undoable(`Deleted "${request.presetName}"`, { ok: true, message: `Preset "${request.presetName}" deleted.` });
+        return undoable(t('Deleted "{name}"', { name: request.presetName }), { ok: true, message: t('Preset "{name}" deleted.', { name: request.presetName }) });
       }).then(asResponse);
     case 'getPresets':
       return getPresets().then(presets => ({ status: 'success', presets }));
@@ -425,13 +425,13 @@ function dispatch(request) {
       return updatePresetStore((p, now) => {
         const result = WLM.mergeImport(p, request.data, now);
         if (!result.ok) return result;
-        return undoable(`Imported ${result.imported} preset(s)`, { ...result, ok: true });
+        return undoable(t('Imported {n} preset(s)', { n: result.imported }), { ...result, ok: true });
       }).then(result => {
-        if (!result.ok) return { success: false, message: 'Invalid import data: expected a JSON object of presets.' };
+        if (!result.ok) return { success: false, message: t('Invalid import data: expected a JSON object of presets.') };
         return {
           success: true,
-          message: `${result.imported} preset(s) imported/updated.` +
-            (result.skipped > 0 ? ` ${result.skipped} skipped (invalid structure or non-web URLs only).` : ''),
+          message: t('{n} preset(s) imported/updated.', { n: result.imported }) +
+            (result.skipped > 0 ? ' ' + t('{n} skipped (invalid structure or non-web URLs only).', { n: result.skipped }) : ''),
         };
       });
     case 'applyPreset':
@@ -451,7 +451,7 @@ function dispatch(request) {
     case 'getDisplays':
       return getDisplays().then(info => ({ status: 'success', ...info }));
     default:
-      return Promise.resolve({ status: 'error', message: `Unknown action: ${request.action}` });
+      return Promise.resolve({ status: 'error', message: t('Unknown action: {action}', { action: request.action }) });
   }
 }
 
@@ -479,7 +479,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse(normalized);
   }).catch(error => {
     console.error(`Error processing action "${request.action}":`, error.message);
-    sendResponse({ status: 'error', message: `Internal error: ${error.message}` });
+    sendResponse({ status: 'error', message: t('Internal error: {error}', { error: error.message }) });
   });
   return true;
 });

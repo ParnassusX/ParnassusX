@@ -18,9 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const matchUpdate = document.getElementById('match-update');
   let matchedName = null;
 
-  openManager.replaceChildren(icon('external'), 'Manage');
-  undoButton.replaceChildren(icon('undo'), 'Undo');
-  changeUndo.replaceChildren(icon('undo'), 'Undo');
+  openManager.replaceChildren(icon('external'), t('Manage'));
+  undoButton.replaceChildren(icon('undo'), t('Undo'));
+  changeUndo.replaceChildren(icon('undo'), t('Undo'));
 
   chrome.storage.sync.get({ theme: 'system' }, ({ theme }) => {
     if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const [response, slotResponse] = await Promise.all([send({ action: 'getPresets' }), send({ action: 'getShortcutSlots' })]);
     quick.replaceChildren();
     if (response.status !== 'success') {
-      quick.append(h('p', { class: 'muted', text: response.message || 'Could not load presets.' }));
+      quick.append(h('p', { class: 'muted', text: response.message || t('Could not load presets.') }));
       return;
     }
     const names = WLM.sortPresetNames(response.presets);
@@ -43,8 +43,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (names.length === 0) {
       quick.append(h('div', { class: 'empty' },
         UI.emptyArt(),
-        h('h2', { text: 'Nothing saved yet' }),
-        h('p', { text: 'Arrange your windows, then save the layout above.' })));
+        h('h2', { text: t('Nothing saved yet') }),
+        h('p', { text: t('Arrange your windows, then save the layout above.') })));
       return;
     }
     const targets = WLM.shortcutTargets(response.presets, slotResponse.slots || {});
@@ -56,10 +56,10 @@ document.addEventListener('DOMContentLoaded', () => {
         h('div', { style: 'min-width:0' },
           h('div', { class: 'preset-name', title: name, text: name }),
           h('div', { class: 'preset-meta' },
-            slot !== -1 ? h('span', { class: 'badge', title: `Ctrl+Shift+${slot + 1} (Command+Shift+${slot + 1} on Mac)`, text: `Shortcut ${slot + 1}` }) : null,
+            slot !== -1 ? h('span', { class: 'badge', title: t('Ctrl+Shift+{n} (Command+Shift+{n} on Mac)', { n: slot + 1 }), text: t('Shortcut {n}', { n: slot + 1 }) }) : null,
             slot !== -1 ? ' ' : '',
             WLM.compactSummary(entry))),
-        h('button', { class: 'btn btn-primary', type: 'button', onclick: () => apply(name), 'aria-label': `Apply ${name}` }, icon('apply'), 'Apply'),
+        h('button', { class: 'btn btn-primary', type: 'button', onclick: () => apply(name), 'aria-label': t('Apply {name}', { name }) }, icon('apply'), t('Apply')),
       ));
     }
   }
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const session = applyResponse.session;
     undoCard.classList.toggle('hidden', !session);
     if (session) {
-      undoText.textContent = `Your last apply closed ${plural(session.windows, 'window')}.`;
+      undoText.textContent = t('Your last apply closed {windows}.', { windows: plural(session.windows, 'window') });
     }
     const change = changeResponse.undo;
     changeCard.classList.toggle('hidden', !change);
@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const taken = WLM.uniqueName(saved.presets, WLM.suggestName(layout));
     if (taken && !nameInput.value.trim()) {
-      suggest.replaceChildren(icon('plus'), `Name it "${taken}"`);
+      suggest.replaceChildren(icon('plus'), t('Name it "{name}"', { name: taken }));
       suggest.onclick = () => { nameInput.value = taken; nameInput.focus(); suggest.classList.add('hidden'); };
       suggest.classList.remove('hidden');
     }
@@ -98,14 +98,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!match || match.score < 0.5) return;
     matchCard.classList.remove('hidden');
     if (match.score === 1) {
-      matchText.textContent = `Your windows match "${match.name}".`;
+      matchText.textContent = t('Your windows match "{name}".', { name: match.name });
       matchUpdate.classList.add('hidden');
       return;
     }
     matchedName = match.name;
-    matchText.textContent = `Looks like "${match.name}": ${match.added} new and ${match.removed} closed since you saved it.`;
-    matchUpdate.replaceChildren(icon('update'), 'Update');
-    matchUpdate.setAttribute('aria-label', `Update ${match.name} with the current windows`);
+    matchText.textContent = t('Looks like "{name}": {added} new and {removed} closed since you saved it.', { name: match.name, added: match.added, removed: match.removed });
+    matchUpdate.replaceChildren(icon('update'), t('Update'));
+    matchUpdate.setAttribute('aria-label', t('Update {name} with the current windows', { name: match.name }));
     matchUpdate.classList.remove('hidden');
   }
 
@@ -120,10 +120,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!(await UI.ensureBehaviorChosen())) return;
     const response = await send({ action: 'applyPreset', presetName: name, keepWindowId: await lastFocusedWindowId() });
     if (response.status === 'success') {
-      toast(`Applied "${name}".`, 'success');
+      toast(t('Applied "{name}".', { name }), 'success');
       setTimeout(() => window.close(), 700);
     } else {
-      toast(response.message || 'Could not apply the preset.', 'error');
+      toast(response.message || t('Could not apply the preset.'), 'error');
     }
     renderUndo();
   }
@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const name = nameInput.value.trim();
     nameError.textContent = '';
     if (!name) {
-      nameError.textContent = 'Enter a name for the layout.';
+      nameError.textContent = t('Enter a name for the layout.');
       nameInput.focus();
       return;
     }
@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderSmart();
     } else {
       // Keep the typed name so it can be changed, and say why.
-      nameError.textContent = response.message || 'Could not save the layout.';
+      nameError.textContent = response.message || t('Could not save the layout.');
       nameInput.select();
     }
   });
@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   openManager.addEventListener('click', async () => {
     const windowId = await lastFocusedWindowId();
-    chrome.sidePanel.open({ windowId }).catch(error => toast(`Could not open the side panel: ${error.message}`, 'error'));
+    chrome.sidePanel.open({ windowId }).catch(error => toast(t('Could not open the side panel: {error}', { error: error.message }), 'error'));
   });
 
   renderQuick();
