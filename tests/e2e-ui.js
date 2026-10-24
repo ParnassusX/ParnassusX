@@ -188,6 +188,24 @@ async function main() {
     check('changing a setting does not show a toast', /hidden/.test(toastAfterSetting), toastAfterSetting);
     await panel.click('label:has(input[value="close_all"])'); await wait(200);
 
+    // ---- Long lists render in pages ----
+    const manyData = {};
+    for (let i = 0; i < 120; i++) manyData[`Many ${String(i).padStart(3, '0')}`] = { windows: [{ tabs: [{ url: `https://m.test/${i}` }] }], displays: [] };
+    await send(panel, { action: 'importPresets', data: manyData });
+    await panel.reload(); await wait(900);
+    const firstPage = await panel.locator('#preset-list .preset').count();
+    check('a long list shows one page at first', firstPage === 50, firstPage);
+    await panel.locator('#preset-list > button:has-text("Show")').click(); await wait(400);
+    check('"Show more" reveals the next page', (await panel.locator('#preset-list .preset').count()) === 100);
+    await panel.fill('#search', 'Many 119'); await wait(300);
+    check('search still reaches presets beyond the first page', (await panel.locator('#preset-list .preset').count()) === 1);
+    await panel.fill('#search', '');
+    await sw.evaluate(async () => {
+      const { presets } = await chrome.storage.local.get('presets');
+      for (const key of Object.keys(presets)) if (key.startsWith('Many ')) delete presets[key];
+      await chrome.storage.local.set({ presets });
+    });
+
     // ---- Screenshots for review ----
     if (SHOTS) {
       fs.mkdirSync(SHOTS, { recursive: true });

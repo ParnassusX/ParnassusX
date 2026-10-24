@@ -21,12 +21,30 @@ function updatePresetStore(mutate) {
     const presets = data.presets || {};
     const before = JSON.parse(JSON.stringify(presets));
     const result = mutate(presets, Date.now());
-    if (result.ok) {
-      await chrome.storage.local.set({ presets });
-      if (result.undoLabel) {
-        const log = Array.isArray(data.undoLog) ? data.undoLog : [];
-        const next = [{ label: result.undoLabel, at: Date.now(), presets: before }, ...log].slice(0, UNDO_LIMIT);
-        await chrome.storage.local.set({ undoLog: next });
+    if (!result.ok) return result;
+
+    let log = Array.isArray(data.undoLog) ? data.undoLog : [];
+    if (result.undoLabel) {
+      log = [{ label: result.undoLabel, at: Date.now(), presets: before }, ...log];
+    }
+    // The log is capped by size, not only by count. If the newest snapshot does
+    // not fit, the log is emptied: keeping only older snapshots would let Undo
+    // silently revert this change as well.
+    const presetsBytes = JSON.stringify(presets).length;
+    log = WLM.trimUndoLog(log, WLM.undoBudget(presetsBytes), UNDO_LIMIT);
+    if (result.undoLabel && log.length === 0) {
+      result.message += ' This change is too large to undo.';
+    }
+
+    try {
+      await chrome.storage.local.set({ presets, undoLog: log });
+    } catch (error) {
+      // Out of space: the edit matters more than its history. Retry without it.
+      try {
+        await chrome.storage.local.set({ presets, undoLog: [] });
+        result.message += ' Undo history was cleared because storage is nearly full.';
+      } catch (retryError) {
+        return { ok: false, message: 'Storage is full. Export and delete some presets, then try again.' };
       }
     }
     return result;

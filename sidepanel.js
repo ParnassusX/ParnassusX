@@ -19,6 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentSignature = null;
   let screensDismissed = false;
   let highlightName = null;
+  const PAGE_SIZE = 50;
+  let visibleCount = PAGE_SIZE;
 
   // ---- Tabs ---------------------------------------------------------------
   function selectTab(name) {
@@ -193,7 +195,13 @@ document.addEventListener('DOMContentLoaded', () => {
       presetList.append(h('p', { class: 'muted', text: `Nothing matches "${searchInput.value.trim()}".` }));
       return;
     }
-    names.forEach(name => presetList.append(presetCard(name)));
+    if (highlightName && names.indexOf(highlightName) >= visibleCount) visibleCount = names.indexOf(highlightName) + 1;
+    names.slice(0, visibleCount).forEach(name => presetList.append(presetCard(name)));
+    if (names.length > visibleCount) {
+      const remaining = names.length - visibleCount;
+      presetList.append(h('button', { class: 'btn btn-block', type: 'button', onclick: () => { visibleCount += PAGE_SIZE; renderPresets(); } },
+        `Show ${Math.min(remaining, PAGE_SIZE)} more (${remaining} not shown)`));
+    }
     if (highlightName) {
       const node = presetList.querySelector(`[data-name="${CSS.escape(highlightName)}"]`);
       if (node) node.scrollIntoView({ block: 'nearest' });
@@ -287,7 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadPresets();
   }
 
-  searchInput.addEventListener('input', renderPresets);
+  searchInput.addEventListener('input', () => { visibleCount = PAGE_SIZE; renderPresets(); });
   const captureButton = document.getElementById('capture');
   captureButton.replaceChildren(icon('plus'), 'Capture');
   captureButton.addEventListener('click', captureNew);

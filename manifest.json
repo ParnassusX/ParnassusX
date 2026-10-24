@@ -2,6 +2,7 @@
   "name": "Window Layout Manager",
   "description": "Save and restore window and tab layouts as named presets.",
   "version": "0.2.0",
+  "minimum_chrome_version": "116",
   "manifest_version": 3,
   "icons": {
     "16": "icons/icon16.png",
@@ -29,15 +30,24 @@
   },
   "commands": {
     "apply-preset-1": {
-      "suggested_key": { "default": "Ctrl+Shift+1", "mac": "Command+Shift+1" },
+      "suggested_key": {
+        "default": "Ctrl+Shift+1",
+        "mac": "Command+Shift+1"
+      },
       "description": "Apply first preset (alphabetical)"
     },
     "apply-preset-2": {
-      "suggested_key": { "default": "Ctrl+Shift+2", "mac": "Command+Shift+2" },
+      "suggested_key": {
+        "default": "Ctrl+Shift+2",
+        "mac": "Command+Shift+2"
+      },
       "description": "Apply second preset (alphabetical)"
     },
     "apply-preset-3": {
-      "suggested_key": { "default": "Ctrl+Shift+3", "mac": "Command+Shift+3" },
+      "suggested_key": {
+        "default": "Ctrl+Shift+3",
+        "mac": "Command+Shift+3"
+      },
       "description": "Apply third preset (alphabetical)"
     }
   },

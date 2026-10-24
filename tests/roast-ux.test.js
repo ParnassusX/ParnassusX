@@ -84,3 +84,24 @@ test('compactSummary is short and singular/plural correct', () => {
   assert.equal(WLM.compactSummary({ windows: [{ tabs: [{}] }] }), '1 window · 1 tab');
   assert.equal(WLM.compactSummary({ windows: [{ tabs: [{}, {}] }, { tabs: [{}] }] }), '2 windows · 3 tabs');
 });
+
+test('trimUndoLog keeps the newest entries that fit and never skips a change', () => {
+  const entry = (n, size) => ({ label: `change ${n}`, presets: { blob: 'x'.repeat(size) } });
+  const log = [entry(3, 100), entry(2, 100), entry(1, 100)];
+  const each = JSON.stringify(log[0]).length;
+  assert.equal(WLM.trimUndoLog(log, each * 10).length, 3);
+  assert.deepEqual(WLM.trimUndoLog(log, each * 2 + 1).map(e => e.label), ['change 3', 'change 2']);
+  assert.equal(WLM.trimUndoLog(log, each - 1).length, 0, 'newest does not fit: nothing is kept');
+  // An oversized middle entry stops the log there, so a later undo cannot jump over it.
+  const mixed = [entry(3, 100), entry(2, 100000), entry(1, 100)];
+  assert.deepEqual(WLM.trimUndoLog(mixed, 5000).map(e => e.label), ['change 3']);
+  assert.equal(WLM.trimUndoLog(log, each * 10, 2).length, 2, 'count limit applies too');
+});
+
+test('undoBudget shrinks as the presets grow and never goes negative', () => {
+  const quota = 10 * 1024 * 1024;
+  assert.equal(WLM.undoBudget(0), 4 * 1024 * 1024, 'capped at 4 MB');
+  assert.equal(WLM.undoBudget(8 * 1024 * 1024), 1024 * 1024, 'what is left after the presets and a 1 MB margin');
+  assert.equal(WLM.undoBudget(quota), 0);
+  assert.equal(WLM.undoBudget(quota * 2), 0);
+});

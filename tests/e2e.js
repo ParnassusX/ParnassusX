@@ -122,6 +122,27 @@ async function main() {
     const tabUrls = await sw.evaluate(() => chrome.tabs.query({}).then(ts => ts.map(t => t.url)));
     check('no file: tab is opened', !tabUrls.some(u => u && u.startsWith('file:')), tabUrls);
 
+    // ---- A large library must never lock the extension (undo log is size-capped) ----
+    const bigLayout = (i) => ({ windows: Array.from({ length: 4 }, (_, w) => ({ left: 10, top: 10, width: 900, height: 700, displayId: '1',
+      tabs: Array.from({ length: 12 }, (_, t) => ({ url: `https://example.com/p${i}/${w}/${t}?q=${'x'.repeat(60)}`, title: `Document ${i} ${w} ${t} with a realistic long title`, active: t === 0 })) })),
+      displays: [{ id: '1', isPrimary: true, bounds: { left: 0, top: 0, width: 1920, height: 1080 } }] });
+    const bigData = {};
+    for (let i = 0; i < 200; i++) bigData[`Big ${String(i).padStart(3, '0')}`] = bigLayout(i);
+    await fresh();
+    await send(panel, { action: 'importPresets', data: bigData });
+    const presetsBytes = await sw.evaluate(() => new Promise(r => chrome.storage.local.getBytesInUse('presets', r)));
+    let failures = 0;
+    for (let k = 0; k < 12; k++) {
+      const r = await send(panel, { action: 'renamePreset', presetName: `Big ${String(k).padStart(3, '0')}`, newName: `Renamed ${k}` });
+      if (r.status !== 'success') failures++;
+    }
+    const totalBytes = await sw.evaluate(() => new Promise(r => chrome.storage.local.getBytesInUse(null, r)));
+    check(`12 edits succeed on a ${(presetsBytes / 1048576).toFixed(1)} MB library`, failures === 0, { failures });
+    check('storage stays under the 10 MB quota with margin', totalBytes < 9.5 * 1048576, (totalBytes / 1048576).toFixed(2));
+    const del = await send(panel, { action: 'deletePreset', presetName: 'Renamed 11' });
+    check('delete still works on a large library', del.success === true, del);
+    await fresh();
+
     // ---- Screens info and settings ----
     const screens = await send(panel, { action: 'getDisplays' });
     check('display info is reported with a signature', screens.status === 'success' && typeof screens.signature === 'string', screens);

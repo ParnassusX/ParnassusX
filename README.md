@@ -80,5 +80,7 @@ To regenerate the PNG icons from `icons/icon.svg`: `CHROME_BIN=... node tools/re
 - `docs/ROAST.md`: review of the first version and what was fixed.
 - `docs/ROAST-UX.md`: review of the interface and flows, with what was verified and what is still open.
 - `docs/INSPIRATION.md`: open source projects looked at, and which ideas were taken.
+- `docs/READINESS.md`: honest verdict on whether the app is ready to publish and to sell.
+- `docs/PRIVACY.md`, `docs/STORE-LISTING.md`: drafts for the Chrome Web Store submission.
 - `docs/MONETIZATION.md`: draft plan for a paid tier.
 - `docs/strategy/`: early concept notes. They are not validated and do not describe what is built.
