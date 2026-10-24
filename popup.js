@@ -41,7 +41,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const names = WLM.sortPresetNames(response.presets);
     count.textContent = names.length ? plural(names.length, 'preset') : '';
     if (names.length === 0) {
-      quick.append(h('p', { class: 'muted', text: 'No presets yet. Arrange your windows, then save the layout above.' }));
+      quick.append(h('div', { class: 'empty' },
+        UI.emptyArt(),
+        h('h2', { text: 'Nothing saved yet' }),
+        h('p', { text: 'Arrange your windows, then save the layout above.' })));
       return;
     }
     const targets = WLM.shortcutTargets(response.presets, slotResponse.slots || {});

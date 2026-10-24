@@ -213,7 +213,8 @@ async function main() {
     await popup.locator('#quick .quick-item button:has-text("Apply")').first().click(); await wait(500);
     check('the first apply asks how layouts should be applied', (await popup.locator('dialog[open] input[type=radio]').count()) === 3);
     await popup.locator('dialog[open] input[value="merge"]').check();
-    await popup.locator('dialog[open] .btn-primary').click(); await wait(900);
+    await popup.locator('dialog[open] .btn-primary').click();
+    for (let i = 0; i < 30 && !popup.isClosed(); i++) await wait(150); // closes itself ~700 ms after a successful apply
     const choice = await sw.evaluate(() => chrome.storage.sync.get(['presetBehavior', 'behaviorConfirmed']));
     check('the choice is saved and confirmed', choice.presetBehavior === 'merge' && choice.behaviorConfirmed === true, choice);
     await sw.evaluate(() => chrome.storage.sync.set({ presetBehavior: 'close_all', behaviorConfirmed: true }));
@@ -273,6 +274,21 @@ async function main() {
       await panel.screenshot({ path: path.join(SHOTS, 'ui-panel-dark.png') });
       await popup.emulateMedia({ colorScheme: 'dark' }); await wait(300);
       await popup.screenshot({ path: path.join(SHOTS, 'ui-popup-dark.png') });
+      await popup.emulateMedia({ colorScheme: 'light' });
+
+      const welcomeShot = await ctx.newPage();
+      await welcomeShot.setViewportSize({ width: 1000, height: 1000 });
+      await welcomeShot.goto(`chrome-extension://${extId}/welcome.html`); await wait(700);
+      await welcomeShot.screenshot({ path: path.join(SHOTS, 'ui-welcome.png') });
+      await welcomeShot.emulateMedia({ colorScheme: 'dark' }); await wait(300);
+      await welcomeShot.screenshot({ path: path.join(SHOTS, 'ui-welcome-dark.png') });
+      await welcomeShot.close();
+
+      await sw.evaluate(() => chrome.storage.local.clear());
+      await popup.reload(); await panel.reload(); await wait(800);
+      await popup.screenshot({ path: path.join(SHOTS, 'ui-popup-empty.png') });
+      await panel.emulateMedia({ colorScheme: 'light' });
+      await panel.screenshot({ path: path.join(SHOTS, 'ui-panel-empty.png') });
     }
 
     check('extension pages raised no uncaught errors', errors.length === 0, errors);

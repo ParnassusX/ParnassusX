@@ -188,8 +188,9 @@ document.addEventListener('DOMContentLoaded', () => {
     presetList.replaceChildren();
     if (Object.keys(presets).length === 0) {
       presetList.append(h('div', { class: 'empty' },
-        h('h2', { text: 'No presets yet' }),
-        h('p', { text: 'Arrange your windows, then press Capture. Or start from the Library.' })));
+        UI.emptyArt(),
+        h('h2', { text: 'Nothing saved yet' }),
+        h('p', { text: 'Arrange your windows the way you like them, then press Capture. Or start from the Library.' })));
       return;
     }
     if (names.length === 0) {

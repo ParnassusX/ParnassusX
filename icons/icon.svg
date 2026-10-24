@@ -1,15 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#2563eb"/>
-      <stop offset="1" stop-color="#1e40af"/>
+      <stop offset="0" stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#3730a3"/>
     </linearGradient>
   </defs>
-  <rect x="0" y="0" width="128" height="128" rx="28" fill="url(#bg)"/>
-  <!-- three window panes: large left, two stacked on the right -->
-  <rect x="22" y="26" width="52" height="76" rx="8" fill="#ffffff"/>
-  <rect x="82" y="26" width="24" height="34" rx="6" fill="#ffffff" fill-opacity="0.92"/>
-  <rect x="82" y="68" width="24" height="34" rx="6" fill="#ffffff" fill-opacity="0.72"/>
-  <!-- title bar on the large pane -->
-  <rect x="22" y="26" width="52" height="10" rx="5" fill="#93c5fd"/>
+  <rect width="128" height="128" rx="30" fill="url(#bg)"/>
+  <!-- three panes snapping into a layout: a large window, and two stacked beside it -->
+  <rect x="20" y="24" width="58" height="80" rx="9" fill="#ffffff"/>
+  <rect x="86" y="24" width="22" height="36" rx="7" fill="#fbbf24"/>
+  <rect x="86" y="68" width="22" height="36" rx="7" fill="#c7d2fe"/>
+  <!-- window chrome on the large pane -->
+  <rect x="20" y="24" width="58" height="14" rx="9" fill="#e0e7ff"/>
+  <rect x="20" y="31" width="58" height="7" fill="#e0e7ff"/>
+  <circle cx="30" cy="31" r="2.6" fill="#6366f1"/>
+  <circle cx="38.5" cy="31" r="2.6" fill="#a5b4fc"/>
+  <circle cx="47" cy="31" r="2.6" fill="#c7d2fe"/>
+  <rect x="28" y="48" width="34" height="5" rx="2.5" fill="#c7d2fe"/>
+  <rect x="28" y="58" width="42" height="5" rx="2.5" fill="#e0e7ff"/>
+  <rect x="28" y="68" width="26" height="5" rx="2.5" fill="#e0e7ff"/>
 </svg>
